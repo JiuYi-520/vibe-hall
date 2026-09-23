@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import type { CategoryId, Project } from '../data/types'
-import type { Wish, WishSortKey, WishStatus } from '../data/wishTypes'
-import { WISH_SORT_LABEL, WISH_STATUS_META, WISH_STATUS_ORDER } from '../data/wishTypes'
-import { filterWishes, sortWishes, validateWishDraft, wishCategories, wishStats } from '../data/wishes'
+import type { Wish } from '../data/wishTypes'
+import { filterWishes, sortWishes, validateWishDraft } from '../data/wishes'
 import { PROJECT_CATEGORIES } from '../data/categories'
 import { loadProjects } from '../data/loadProjects'
-import { toggleInList } from '../lib/urlState'
 import { useCopy } from '../lib/hooks'
 import { type WishBoard, useWishes, wishBoard as defaultBoard } from '../lib/wishBoard'
 import { type IdentityBoard, identityBoard as defaultIdentity, useIdentity } from '../lib/identityStore'
@@ -20,7 +18,6 @@ interface WishesPageProps {
 
 const bundle = loadProjects()
 
-const SORT_ORDER: WishSortKey[] = ['open-first', 'newest', 'cheers']
 
 const FAIL_TEXT: Record<string, string> = {
   'missing-maker': '请至少填一个接单人名字或账号',
@@ -39,9 +36,6 @@ export function WishesPage({ board = defaultBoard, identity = defaultIdentity, p
   /** 从命令面板跳进来时高亮并滚到那一条。 */
   const focus = params.get('focus')
   const [query, setQuery] = useState('')
-  const [statuses, setStatuses] = useState<WishStatus[]>([])
-  const [cats, setCats] = useState<CategoryId[]>([])
-  const [sort, setSort] = useState<WishSortKey>('open-first')
   const [formOpen, setFormOpen] = useState(false)
   const [draft, setDraft] = useState(() => ({
     title: '',
@@ -57,11 +51,9 @@ export function WishesPage({ board = defaultBoard, identity = defaultIdentity, p
   const [toast, copy] = useCopy()
 
   const filtered = useMemo(
-    () => sortWishes(filterWishes(wishes, { query, statuses, categories: cats }), sort),
-    [wishes, query, statuses, cats, sort],
+    () => sortWishes(filterWishes(wishes, { query }), 'open-first'),
+    [wishes, query],
   )
-  const stats = wishStats(wishes)
-  const facets = useMemo(() => wishCategories(wishes), [wishes])
   const localCount = board.getState().patch.created.length
 
   useEffect(() => {
@@ -102,8 +94,6 @@ export function WishesPage({ board = defaultBoard, identity = defaultIdentity, p
     })
     setFormOpen(false)
     setQuery('')
-    setStatuses([])
-    setCats([])
   }
 
   const claim = (id: string, maker: { name: string; handle: string }, note: string) => {
@@ -120,55 +110,20 @@ export function WishesPage({ board = defaultBoard, identity = defaultIdentity, p
 
   return (
     <div className="section wishes">
-      <header className="wishes__head">
-        <p className="wishes__eyebrow enter" style={{ ['--i' as string]: 0 }}>
-          愿望墙 · {stats.total} 条愿望 · {stats.open} 条还等着人接
-        </p>
-        <h1 className="enter" style={{ ['--i' as string]: 1 }}>
-          说清你想要什么，等人接单
-        </h1>
-        <p className="wishes__lead enter" style={{ ['--i' as string]: 2 }}>
-          贴出你想要什么，等人接单。
-        </p>
-        <div className="wishes__actions enter" style={{ ['--i' as string]: 3 }}>
-          <button type="button" className="btn btn--primary" onClick={() => setFormOpen((open) => !open)}>
-            ✎ 贴一个新愿望
-          </button>
-          <button type="button" className="btn btn--ghost" onClick={() => copy(board.exportJson(), '愿望 JSON')}>
-            导出 JSON
-          </button>
-          {localCount > 0 && (
-            <button type="button" className="btn btn--ghost" onClick={() => board.reset()}>
-              清空本机改动（{localCount}）
-            </button>
-          )}
-          <Link className="btn btn--ghost" to="/">
-            回展馆
-          </Link>
-        </div>
-        <p className="wishes__notice">
-          没有后端：你贴的愿望只存在<strong>本机浏览器</strong>里（刷新不丢），别人看不到；导出 JSON 可交给维护者收录。
-        </p>
-      </header>
-
-      <dl className="wishes__stats" data-testid="wish-stats">
-        <div>
-          <dt>待接单</dt>
-          <dd data-testid="wish-stat-open">{stats.open}</dd>
-        </div>
-        <div>
-          <dt>已接单</dt>
-          <dd data-testid="wish-stat-claimed">{stats.claimed}</dd>
-        </div>
-        <div>
-          <dt>已交付</dt>
-          <dd data-testid="wish-stat-delivered">{stats.delivered}</dd>
-        </div>
-        <div>
-          <dt>全部愿望</dt>
-          <dd data-testid="wish-stat-total">{stats.total}</dd>
-        </div>
-      </dl>
+      <div className="wishes__search">
+        <label className="search">
+          <span className="search__icon" aria-hidden="true">
+            ⌕
+          </span>
+          <input
+            type="search"
+            value={query}
+            aria-label="搜索愿望"
+            placeholder="搜索愿望、标签或许愿人…"
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
+      </div>
 
       {formOpen && (
         <form
@@ -252,74 +207,6 @@ export function WishesPage({ board = defaultBoard, identity = defaultIdentity, p
         </form>
       )}
 
-      <section className="filters" aria-label="筛选愿望">
-        <div className="filters__row">
-          <label className="search">
-            <span className="search__icon" aria-hidden="true">
-              ⌕
-            </span>
-            <input
-              type="search"
-              value={query}
-              aria-label="搜索愿望"
-              placeholder="搜索愿望、标签或许愿人…"
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </label>
-          <div className="segmented" role="group" aria-label="排序方式">
-            {SORT_ORDER.map((key) => (
-              <button key={key} type="button" className={sort === key ? 'is-active' : ''} aria-pressed={sort === key} onClick={() => setSort(key)}>
-                {WISH_SORT_LABEL[key]}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="filters__group" role="group" aria-label="按状态筛选">
-          {WISH_STATUS_ORDER.map((status) => {
-            const active = statuses.includes(status)
-            const count = wishes.filter((wish) => wish.status === status).length
-            return (
-              <button
-                key={status}
-                type="button"
-                className={`pill ${active ? 'pill--active' : ''}`}
-                aria-pressed={active}
-                style={{ ['--pill-hue' as string]: status === 'open' ? 38 : status === 'claimed' ? 154 : 230 }}
-                onClick={() => setStatuses(toggleInList(statuses, status))}
-              >
-                {WISH_STATUS_META[status].label}
-                <em>{count}</em>
-              </button>
-            )
-          })}
-        </div>
-        <div className="filters__group" role="group" aria-label="按分类筛选">
-          <span className="filters__label">分类</span>
-          {facets.map((facet) => {
-            const active = cats.includes(facet.id)
-            const meta = PROJECT_CATEGORIES.find((category) => category.id === facet.id)
-            return (
-              <button
-                key={facet.id}
-                type="button"
-                className={`pill pill--mini ${active ? 'pill--active' : ''}`}
-                aria-pressed={active}
-                style={{ ['--pill-hue' as string]: meta?.hue[0] ?? 212 }}
-                onClick={() => setCats(toggleInList(cats, facet.id))}
-              >
-                {meta?.label ?? facet.id}
-                <em>{facet.count}</em>
-              </button>
-            )
-          })}
-        </div>
-      </section>
-
-      <p className="wishes__count" aria-live="polite">
-        <strong data-testid="wish-count">{filtered.length}</strong>
-        <span> / {wishes.length} 条愿望</span>
-      </p>
-
       {filtered.length > 0 ? (
         <ul className="wishes__list" data-testid="wish-list">
           {filtered.map((wish: Wish) => (
@@ -348,14 +235,28 @@ export function WishesPage({ board = defaultBoard, identity = defaultIdentity, p
             className="btn btn--primary"
             onClick={() => {
               setQuery('')
-              setStatuses([])
-              setCats([])
             }}
           >
             清空筛选
           </button>
         </div>
       )}
+
+      <p className="wishes__bar" aria-live="polite">
+        <strong data-testid="wish-count">{filtered.length}</strong>
+        <span>/ {wishes.length} 条愿望 · 单机版，只有本机能看见</span>
+        <button type="button" className="link-btn" onClick={() => setFormOpen((open) => !open)}>
+          贴一个新愿望
+        </button>
+        <button type="button" className="link-btn" onClick={() => copy(board.exportJson(), '愿望 JSON')}>
+          导出 JSON
+        </button>
+        {localCount > 0 && (
+          <button type="button" className="link-btn" onClick={() => board.reset()}>
+            清空本机改动（{localCount}）
+          </button>
+        )}
+      </p>
 
       {toast && <div className="toast">{toast}</div>}
     </div>

@@ -465,6 +465,12 @@ check('兜底页提供回站入口', (await page.getByRole('link', { name: '展�
 await page.goto(`${BASE}/#/wishes`, { waitUntil: 'networkidle' })
 const wishTotalBefore = Number(await page.getByTestId('wish-count').innerText())
 check('愿望墙列出愿望', wishTotalBefore > 0, `共 ${wishTotalBefore} 条`)
+check(
+  '愿望墙顶部只剩一个搜索框',
+  (await page.locator('.wishes__search input').count()) === 1 &&
+    (await page.locator('.wishes__search button, .wishes__stats, .wishes__notice, .wishes__actions').count()) === 0,
+  `${await page.locator('.wishes__search button, .wishes__stats, .wishes__notice, .wishes__actions').count()} 处残留`,
+)
 await page.screenshot({ path: `${OUT}/11-wish-wall.png`, fullPage: true })
 
 const myWishTitle = '想要一个把晾衣绳天气提醒做成看板的东西'

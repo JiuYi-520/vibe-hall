@@ -89,27 +89,25 @@ describe('WishesPage', () => {
     expect(screen.getByLabelText('账号')).toHaveValue('a-dao')
   })
 
-  it('列出全部愿望并给出状态统计', () => {
+  it('顶部只有一个搜索框：没有按钮、统计卡、说明块与排序', () => {
     renderPage()
-    expect(screen.getByTestId('wish-count')).toHaveTextContent(/^3$/)
-    expect(screen.getByTestId('wish-stat-open')).toHaveTextContent(/^2$/)
-    expect(screen.getByTestId('wish-stat-claimed')).toHaveTextContent(/^1$/)
+    const top = document.querySelector('.wishes__search')
+    expect(top).not.toBeNull()
+    expect(top?.querySelectorAll('button').length).toBe(0)
+    expect(document.querySelector('.wishes__stats')).toBeNull()
+    expect(document.querySelector('.wishes__notice')).toBeNull()
+    expect(document.querySelector('.wishes__actions')).toBeNull()
+    expect(screen.queryByRole('button', { name: /待接单优先|最想要/ })).toBeNull()
     expect(screen.getByTestId('wish-card-seed-one')).toBeInTheDocument()
   })
 
-  it('按状态和关键词收窄列表', async () => {
+  it('用搜索框收窄列表', async () => {
     const user = userEvent.setup()
     renderPage()
-
-    const statusGroup = screen.getByRole('group', { name: '按状态筛选' })
-    await user.click(within(statusGroup).getByRole('button', { name: /待接单/ }))
-    expect(screen.getByTestId('wish-count')).toHaveTextContent(/^2$/)
-    expect(screen.queryByTestId('wish-card-seed-two')).not.toBeInTheDocument()
-
-    await user.click(within(statusGroup).getByRole('button', { name: /待接单/ }))
     await user.type(screen.getByRole('searchbox', { name: /搜索愿望/ }), '恐龙')
     expect(screen.getByTestId('wish-count')).toHaveTextContent(/^1$/)
     expect(screen.getByTestId('wish-card-seed-two')).toBeInTheDocument()
+    expect(screen.queryByTestId('wish-card-seed-one')).not.toBeInTheDocument()
   })
 
   it('可以给愿望加一个“我也想要”', async () => {
@@ -133,7 +131,6 @@ describe('WishesPage', () => {
     const updated = screen.getByTestId('wish-card-seed-one')
     expect(updated).toHaveTextContent('已接单')
     expect(updated).toHaveTextContent('a-dao')
-    expect(screen.getByTestId('wish-stat-open')).toHaveTextContent(/^1$/)
   })
 
   it('接单缺署名时报错且不改变状态', async () => {
@@ -143,7 +140,10 @@ describe('WishesPage', () => {
     await user.click(within(card).getByRole('button', { name: '我来接单' }))
     await user.click(within(card).getByRole('button', { name: '确认接单' }))
     expect(within(card).getByRole('alert')).toHaveTextContent('接单人')
-    expect(screen.getByTestId('wish-stat-open')).toHaveTextContent(/^2$/)
+    // 没有署名就不该变成已接单：状态与按钮都留在「待接单」
+    expect(screen.getByTestId('wish-card-seed-one')).toHaveTextContent('待接单')
+    // 表单不关闭，用户可以直接补上署名再提交
+    expect(within(screen.getByTestId('wish-card-seed-one')).getByRole('button', { name: '确认接单' })).toBeInTheDocument()
   })
 
   it('交付：已接单的愿望可以关联一件展品', async () => {
@@ -157,7 +157,6 @@ describe('WishesPage', () => {
     const updated = screen.getByTestId('wish-card-seed-two')
     expect(updated).toHaveTextContent('已交付')
     expect(within(updated).getByRole('link', { name: /霓虹看板/ })).toBeInTheDocument()
-    expect(screen.getByTestId('wish-stat-delivered')).toHaveTextContent(/^1$/)
   })
 
   it('可以贴一条新愿望，校验通过后置顶显示', async () => {
