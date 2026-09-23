@@ -1,0 +1,43 @@
+{
+  "schema": "vibe-hall.star-history.v1",
+  "snapshots": [
+    {
+      "at": "2026-09-22T09:35:41.774Z",
+      "repos": {
+        "xintaofei/codeg": 3637,
+        "liu-ziting/what-to-eat": 3542,
+        "stravu/crystal": 3119,
+        "LingyiChen-AI/AIComicBuilder": 1878,
+        "spec-kitty/spec-kitty": 1637,
+        "alchaincyf/fanbox": 1017,
+        "ideaplexa/voicetypr": 719,
+        "liyupi/yupi-hot-monitor": 718,
+        "LingyiChen-AI/vibe-coding": 709,
+        "DeadWaveWave/demo2apk": 634,
+        "Coolver/home-assistant-vibecode-agent": 632,
+        "ryantsai/KKTerm": 495,
+        "Kronop/vibe-aso": 416,
+        "maciej-trebacz/tower-of-time-game": 372
+      }
+    },
+    {
+      "at": "2026-09-22T09:37:46.853Z",
+      "repos": {
+        "xintaofei/codeg": 3637,
+        "liu-ziting/what-to-eat": 3542,
+        "stravu/crystal": 3119,
+        "LingyiChen-AI/AIComicBuilder": 1878,
+        "spec-kitty/spec-kitty": 1637,
+        "alchaincyf/fanbox": 1017,
+        "ideaplexa/voicetypr": 719,
+        "liyupi/yupi-hot-monitor": 718,
+        "LingyiChen-AI/vibe-coding": 709,
+        "DeadWaveWave/demo2apk": 634,
+        "Coolver/home-assistant-vibecode-agent": 632,
+        "ryantsai/KKTerm": 495,
+        "Kronop/vibe-aso": 416,
+        "maciej-trebacz/tower-of-time-game": 372
+      }
+    }
+  ]
+}

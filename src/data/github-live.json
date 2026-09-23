@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-09-22T07:21:32.514Z",
+  "fetchedAt": "2026-09-22T09:37:46.853Z",
   "query": "topic:vibe-coding | vibe coded app | vibe coding work | vibe coded indie work | topic:built-with-claude",
   "count": 14,
   "projects": [
@@ -44,12 +44,12 @@
       "createdAt": "2026-02-09",
       "updatedAt": "2026-09-22",
       "likes": 0,
-      "stars": 3634,
+      "stars": 3637,
       "featured": true,
       "status": "live",
       "provenance": {
         "source": "github",
-        "fetchedAt": "2026-09-22T07:21:14.985Z",
+        "fetchedAt": "2026-09-22T09:37:28.619Z",
         "query": "topic:vibe-coding",
         "repoFullName": "xintaofei/codeg",
         "htmlUrl": "https://github.com/xintaofei/codeg"
@@ -94,12 +94,12 @@
       "createdAt": "2025-08-11",
       "updatedAt": "2026-01-12",
       "likes": 0,
-      "stars": 3543,
+      "stars": 3542,
       "featured": true,
       "status": "live",
       "provenance": {
         "source": "github",
-        "fetchedAt": "2026-09-22T07:21:14.986Z",
+        "fetchedAt": "2026-09-22T09:37:28.620Z",
         "query": "topic:vibe-coding",
         "repoFullName": "liu-ziting/what-to-eat",
         "htmlUrl": "https://github.com/liu-ziting/what-to-eat"
@@ -146,12 +146,12 @@
       "createdAt": "2025-06-05",
       "updatedAt": "2026-02-26",
       "likes": 0,
-      "stars": 3118,
+      "stars": 3119,
       "featured": true,
       "status": "live",
       "provenance": {
         "source": "github",
-        "fetchedAt": "2026-09-22T07:21:14.986Z",
+        "fetchedAt": "2026-09-22T09:37:28.620Z",
         "query": "topic:vibe-coding",
         "repoFullName": "stravu/crystal",
         "htmlUrl": "https://github.com/stravu/crystal"
@@ -203,7 +203,7 @@
       "status": "live",
       "provenance": {
         "source": "github",
-        "fetchedAt": "2026-09-22T07:21:19.535Z",
+        "fetchedAt": "2026-09-22T09:37:32.548Z",
         "query": "vibe coded app",
         "repoFullName": "LingyiChen-AI/AIComicBuilder",
         "htmlUrl": "https://github.com/LingyiChen-AI/AIComicBuilder"
@@ -250,12 +250,12 @@
       "createdAt": "2025-10-09",
       "updatedAt": "2026-09-22",
       "likes": 0,
-      "stars": 1636,
+      "stars": 1637,
       "featured": true,
       "status": "live",
       "provenance": {
         "source": "github",
-        "fetchedAt": "2026-09-22T07:21:14.987Z",
+        "fetchedAt": "2026-09-22T09:37:28.620Z",
         "query": "topic:vibe-coding",
         "repoFullName": "spec-kitty/spec-kitty",
         "htmlUrl": "https://github.com/spec-kitty/spec-kitty"
@@ -307,7 +307,7 @@
       "status": "live",
       "provenance": {
         "source": "github",
-        "fetchedAt": "2026-09-22T07:21:23.532Z",
+        "fetchedAt": "2026-09-22T09:37:36.960Z",
         "query": "vibe coding work",
         "repoFullName": "alchaincyf/fanbox",
         "htmlUrl": "https://github.com/alchaincyf/fanbox"
@@ -359,7 +359,7 @@
       "status": "live",
       "provenance": {
         "source": "github",
-        "fetchedAt": "2026-09-22T07:21:23.532Z",
+        "fetchedAt": "2026-09-22T09:37:36.960Z",
         "query": "vibe coding work",
         "repoFullName": "ideaplexa/voicetypr",
         "htmlUrl": "https://github.com/ideaplexa/voicetypr"
@@ -411,7 +411,7 @@
       "status": "live",
       "provenance": {
         "source": "github",
-        "fetchedAt": "2026-09-22T07:21:23.532Z",
+        "fetchedAt": "2026-09-22T09:37:36.960Z",
         "query": "vibe coding work",
         "repoFullName": "liyupi/yupi-hot-monitor",
         "htmlUrl": "https://github.com/liyupi/yupi-hot-monitor"
@@ -457,7 +457,7 @@
       "status": "live",
       "provenance": {
         "source": "github",
-        "fetchedAt": "2026-09-22T07:21:23.532Z",
+        "fetchedAt": "2026-09-22T09:37:36.960Z",
         "query": "vibe coding work",
         "repoFullName": "LingyiChen-AI/vibe-coding",
         "htmlUrl": "https://github.com/LingyiChen-AI/vibe-coding"
@@ -504,7 +504,7 @@
       "status": "live",
       "provenance": {
         "source": "github",
-        "fetchedAt": "2026-09-22T07:21:23.532Z",
+        "fetchedAt": "2026-09-22T09:37:36.960Z",
         "query": "vibe coding work",
         "repoFullName": "DeadWaveWave/demo2apk",
         "htmlUrl": "https://github.com/DeadWaveWave/demo2apk"
@@ -556,7 +556,7 @@
       "status": "live",
       "provenance": {
         "source": "github",
-        "fetchedAt": "2026-09-22T07:21:23.532Z",
+        "fetchedAt": "2026-09-22T09:37:36.960Z",
         "query": "vibe coding work",
         "repoFullName": "Coolver/home-assistant-vibecode-agent",
         "htmlUrl": "https://github.com/Coolver/home-assistant-vibecode-agent"
@@ -608,7 +608,7 @@
       "status": "live",
       "provenance": {
         "source": "github",
-        "fetchedAt": "2026-09-22T07:21:23.532Z",
+        "fetchedAt": "2026-09-22T09:37:36.960Z",
         "query": "vibe coding work",
         "repoFullName": "ryantsai/KKTerm",
         "htmlUrl": "https://github.com/ryantsai/KKTerm"
@@ -646,7 +646,7 @@
       "status": "live",
       "provenance": {
         "source": "github",
-        "fetchedAt": "2026-09-22T07:21:27.031Z",
+        "fetchedAt": "2026-09-22T09:37:41.440Z",
         "query": "vibe coded indie work",
         "repoFullName": "Kronop/vibe-aso",
         "htmlUrl": "https://github.com/Kronop/vibe-aso"
@@ -684,7 +684,7 @@
       "status": "live",
       "provenance": {
         "source": "github",
-        "fetchedAt": "2026-09-22T07:21:27.031Z",
+        "fetchedAt": "2026-09-22T09:37:41.440Z",
         "query": "vibe coded indie work",
         "repoFullName": "maciej-trebacz/tower-of-time-game",
         "htmlUrl": "https://github.com/maciej-trebacz/tower-of-time-game"

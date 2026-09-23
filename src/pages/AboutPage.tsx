@@ -14,26 +14,15 @@ export function AboutPage() {
       <div className="about__grid">
         <section className="about__card">
           <h2>展什么</h2>
-          <p>
-            游戏、课件、看板、玩具、工具都可以。每件作品都有门牌号、分类、技术栈、
-            一句介绍，以及最重要的两栏：关键提示词和迭代轨迹。
-          </p>
+          <p>游戏、课件、看板、玩具都收。每件作品最重要的两栏是：关键提示词、迭代轨迹。</p>
         </section>
         <section className="about__card">
           <h2>数据从哪来</h2>
-          <p>
-            仓库内置一份示例目录用于展示交互；运行 <code>npm run fetch:github</code> 后会用公开
-            GitHub 搜索快照生成 <code>src/data/github-live.json</code>，页面优先展示真实条目，
-            并逐条标注来源与抓取时间。
-          </p>
+          <p><code>npm run fetch:github</code> 抓公开 GitHub 快照写入 <code>src/data/github-live.json</code>，并追加星标历史供升星榜使用；条目逐条标注来源与抓取时间。</p>
         </section>
         <section className="about__card">
           <h2>怎么做出来的</h2>
-          <p>
-            参考了 GitHub 上已有的几个展览项目：TheGallery 的“一间大厅、许多扇门”结构、
-            soycodetrail/vibe-coding-gallery 的分类与标签导航、vibe-coding-party-gallery 的提交流程。
-            展馆把它们的共同点收敛成：强分类 + 可分享筛选 + 作品叙事。
-          </p>
+          <p>结构参考 TheGallery（一间大厅、许多扇门）、soycodetrail/vibe-coding-gallery（分类与标签导航）。</p>
         </section>
         <section className="about__card">
           <h2>键盘</h2>
@@ -54,11 +43,7 @@ export function AboutPage() {
         </section>
         <section className="about__card">
           <h2>愿望墙是什么</h2>
-          <p>
-            有人想不出做点什么，有人想做的没人要——愿望墙把这两件事接上：把「我想要一个能…的东西」贴出来，
-            谁觉得值得做就按「我来接单」，做完挂回大厅，这条愿望就变成「已交付」。
-            第一版没有后端，你贴的愿望只存在<strong>本机浏览器</strong>里，可以用「导出 JSON」交给维护者收录。
-          </p>
+          <p>贴出「我想要一个能…的东西」，别人接单，做完挂回大厅。没有后端，愿望只存在<strong>本机浏览器</strong>里，导出 JSON 可交给维护者收录。</p>
           <p>
             <Link to="/wishes">去愿望墙 →</Link>
           </p>

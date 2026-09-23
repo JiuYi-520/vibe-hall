@@ -97,8 +97,7 @@ export function WishesPage({ board = defaultBoard, projects = bundle.projects }:
           说清你想要什么，等人接单
         </h1>
         <p className="wishes__lead enter" style={{ ['--i' as string]: 2 }}>
-          这里贴的不是成品，是需求本身：给谁用、解决什么、长什么样。有人觉得这事值得做，就会按下「我来接单」；
-          做出来之后把作品挂回大厅，这条愿望就变成「已交付」。
+          贴出你想要什么。有人接了单、做出来挂回大厅，这条愿望就变成「已交付」。
         </p>
         <div className="wishes__actions enter" style={{ ['--i' as string]: 3 }}>
           <button type="button" className="btn btn--primary" onClick={() => setFormOpen((open) => !open)}>
@@ -117,8 +116,7 @@ export function WishesPage({ board = defaultBoard, projects = bundle.projects }:
           </Link>
         </div>
         <p className="wishes__notice">
-          没有后端：你贴的愿望和接单记录只保存在<strong>这台浏览器的本机存储</strong>里，别人看不到；刷新不丢，
-          「导出 JSON」可以把它们交给展馆维护者正式收录。
+          没有后端：你贴的愿望只存在<strong>本机浏览器</strong>里（刷新不丢），别人看不到；导出 JSON 可交给维护者收录。
         </p>
       </header>
 

@@ -27,6 +27,7 @@ export function SiteHeader({ theme, onToggleTheme, count }: SiteHeaderProps) {
         <NavLink to="/" end>
           展馆
         </NavLink>
+        <NavLink to="/stars">升星榜</NavLink>
         <NavLink to="/wishes">愿望墙</NavLink>
         <NavLink to="/submit">提交作品</NavLink>
         <NavLink to="/about">关于</NavLink>

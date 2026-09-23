@@ -101,8 +101,7 @@ export function HomePage({
             <span className="hero__title-accent">一整条街</span>
           </h1>
           <p className="hero__lead enter" style={{ ['--i' as string]: 2 }}>
-            这里陈列不同创作者的 vibecoding 作品：它们是游戏、课件、看板、玩具，也是别人某天晚上
-            “我就想试试能不能做出来”的结果。点开任意一扇门，能看到那件作品是怎么被说出来的。
+            不同的人用自然语言做出来的东西都在这里。点开一扇门，就能看到它是怎么被说出来的。
           </p>
           <div className="hero__cta enter" style={{ ['--i' as string]: 3 }}>
             <a className="btn btn--primary" href="#hall" onClick={scrollToHall}>
@@ -115,7 +114,7 @@ export function HomePage({
               提交我的作品
             </Link>
             <Link className="btn btn--ghost" to="/wishes">
-              去愿望墙看看
+              愿望墙
             </Link>
           </div>
           <dl className="hero__stats enter" style={{ ['--i' as string]: 4 }}>
@@ -138,13 +137,12 @@ export function HomePage({
           </dl>
           {liveCount === 0 && (
             <p className="hero__notice">
-              当前是内置示例数据（不含真实作者作品）。运行 <code>npm run fetch:github</code> 会拉取真实
-              GitHub 作品并自动替换为“GitHub 实时”来源。
+              当前是示例数据。运行 <code>npm run fetch:github</code> 拉取真实作品。
             </p>
           )}
           {liveCount > 0 && fetchedAt && (
             <p className="hero__notice hero__notice--ok">
-              已合并 {liveCount} 件真实 GitHub 作品，抓取于 {fetchedAt.slice(0, 16).replace('T', ' ')}。
+              真实 GitHub 作品 {liveCount} 件 · 抓取于 {fetchedAt.slice(0, 16).replace('T', ' ')}
             </p>
           )}
         </div>
@@ -156,7 +154,7 @@ export function HomePage({
           <h2>
             <span aria-hidden="true">▤</span> 展馆大厅
           </h2>
-          <p className="section__hint">筛选、排序、键盘导航都可用；筛选状态会写进链接，可直接分享。</p>
+          <p className="section__hint">筛选状态写进链接，可直接分享。</p>
         </div>
 
         <FilterBar
@@ -251,8 +249,7 @@ export function HomePage({
           <div>
             <h2>你的作品也应该有一扇门</h2>
             <p>
-              不限语言、不限体量：一个能跑的网页玩具、一块看板、一个课堂演示，都可以挂进这条街。
-              提交时请附上你的提示词或迭代记录——那是这个展馆最想看的部分。
+              玩具、看板、课堂演示都能挂进来。请附上提示词或迭代记录——这是展馆最想看的部分。
             </p>
           </div>
           <div className="cta-card__actions">

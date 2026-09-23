@@ -12,6 +12,7 @@ const ProjectPage = lazy(() => import('./pages/ProjectPage').then((module) => ({
 const SubmitPage = lazy(() => import('./pages/SubmitPage').then((module) => ({ default: module.SubmitPage })))
 const AboutPage = lazy(() => import('./pages/AboutPage').then((module) => ({ default: module.AboutPage })))
 const WishesPage = lazy(() => import('./pages/WishesPage').then((module) => ({ default: module.WishesPage })))
+const StarsPage = lazy(() => import('./pages/StarsPage').then((module) => ({ default: module.StarsPage })))
 
 function RouteFallback() {
   return (
@@ -104,6 +105,7 @@ function Shell() {
             />
             <Route path="/p/:slug" element={<ProjectPage projects={bundle.projects} />} />
             <Route path="/submit" element={<SubmitPage />} />
+            <Route path="/stars" element={<StarsPage />} />
             <Route path="/wishes" element={<WishesPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="*" element={<ProjectPage projects={bundle.projects} />} />

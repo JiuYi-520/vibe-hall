@@ -258,6 +258,48 @@ await page.screenshot({ path: `${OUT}/09-submit.png`, fullPage: true })
 
 // ---------- reduced motion + narrow viewport ----------
 // ---------- 愿望墙：贴愿望 → 接单 → 交付 → 刷新仍在 ----------
+// ---------- 升星榜 ----------
+await page.goto(`${BASE}/#/`, { waitUntil: 'networkidle' })
+await page.getByRole('link', { name: '升星榜' }).click()
+await page.waitForTimeout(600)
+check('导航可进入升星榜', page.url().includes('/stars'), page.url())
+
+const starRows = page.locator('[data-testid^="star-row-"]')
+const starRowCount = await starRows.count()
+check('升星榜列出真实仓库', starRowCount > 0, `${starRowCount} 行`)
+const snapshotText = await page.locator('.stars__meta').innerText()
+check('升星榜显示真实快照次数', /\d/.test(snapshotText) && snapshotText.includes('快照'), snapshotText.replace(/\s+/g, ' '))
+
+await page.getByRole('button', { name: '增量榜' }).click()
+await page.waitForTimeout(300)
+check('增量全为 0 时会说明原因', await page.getByText(/增量为 0/).isVisible())
+await page.screenshot({ path: `${OUT}/13-stars.png`, fullPage: false })
+
+await page.getByRole('button', { name: '增速榜' }).click()
+await page.waitForTimeout(300)
+check('增速榜可切换', (await page.locator('.segmented--icons, .segmented').first().innerText()).includes('增速榜'))
+
+const skillChip = page.getByRole('button', { name: /技能包/ })
+if ((await skillChip.count()) > 0) {
+  const expected = Number((await skillChip.innerText()).replace(/\D/g, ''))
+  await skillChip.click()
+  await page.waitForTimeout(300)
+  const filtered = await starRows.count()
+  check('按类型（技能包）筛选生效', filtered === expected && filtered <= starRowCount, `${filtered} / 期望 ${expected}`)
+  await skillChip.click()
+  await page.waitForTimeout(200)
+}
+
+await page.addScriptTag({ path: require.resolve('axe-core/axe.min.js') })
+const starScan = await page.evaluate(async () => {
+  const results = await window.axe.run(document, {
+    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] },
+  })
+  return results.violations.map((violation) => ({ id: violation.id, impact: violation.impact, targets: violation.nodes.slice(0, 3).map((node) => node.target.join(' ')) }))
+})
+const starBlocking = starScan.filter((item) => item.impact === 'critical' || item.impact === 'serious')
+check('升星榜 axe-core 无严重问题', starBlocking.length === 0, starBlocking.length ? JSON.stringify(starBlocking) : '0 条严重/致命')
+
 await page.goto(`${BASE}/#/wishes`, { waitUntil: 'networkidle' })
 const wishTotalBefore = Number(await page.getByTestId('wish-count').innerText())
 check('愿望墙列出愿望', wishTotalBefore > 0, `共 ${wishTotalBefore} 条`)

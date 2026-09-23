@@ -78,8 +78,7 @@ export function SubmitPage() {
       <header className="submit__head">
         <h1>提交你的作品</h1>
         <p>
-          第一版不接后端：填完表单会在本地生成一条符合展馆数据格式的 JSON，复制它就能贴进
-          GitHub 议题（Issue）或合并请求（Pull Request）。展馆只要求一件事——请把提示词或迭代过程一起交上来。
+          没有后端：填完生成符合展馆数据格式的 JSON，复制后贴进 GitHub 议题或合并请求即可。请把提示词或迭代过程一起交上来。
         </p>
       </header>
 

@@ -8,12 +8,14 @@
  * Usage: node scripts/fetch-github.mjs [--limit 24]
  * Optional: set GITHUB_TOKEN to raise the anonymous rate limit.
  */
-import { writeFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
 const LIMIT = Number(process.argv.find((arg) => arg.startsWith('--limit='))?.split('=')[1] ?? 24)
 const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/data/github-live.json')
+const HISTORY_OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/data/github-history.json')
+const MAX_SNAPSHOTS = 180
 const UA = 'vibe-hall-fetch'
 
 const QUERIES = [
@@ -137,9 +139,56 @@ function keep(repo) {
   return hasDemo || (repo.stargazers_count ?? 0) <= 1200
 }
 
+async function readJson(file) {
+  try {
+    return JSON.parse(await readFile(file, 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 星标快照历史：升星榜需要「两次以上快照」才能算出真实增量。
+ * 第一次建立历史时，把已有的实时快照（含它自己的 fetchedAt）作为第一个数据点，之后每次抓取追加一条。
+ */
+async function appendHistory(projects, fetchedAt, previousLive) {
+  const existing = await readJson(HISTORY_OUT)
+  const snapshots = Array.isArray(existing?.snapshots) ? [...existing.snapshots] : []
+
+  // 第一次建立历史时，把上一份实时快照（它自己的 fetchedAt）当作第一个数据点
+  if (snapshots.length === 0) {
+    if (previousLive?.fetchedAt && Array.isArray(previousLive.projects)) {
+      const repos = {}
+      for (const project of previousLive.projects) {
+        const fullName = project.provenance?.repoFullName
+        if (fullName) repos[fullName] = project.stars ?? 0
+      }
+      if (Object.keys(repos).length > 0) snapshots.push({ at: live.fetchedAt, repos })
+    }
+  }
+
+  const repos = {}
+  for (const project of projects) {
+    const fullName = project.provenance?.repoFullName
+    if (fullName) repos[fullName] = project.stars ?? 0
+  }
+
+  const last = snapshots[snapshots.length - 1]
+  if (!last || last.at !== fetchedAt) snapshots.push({ at: fetchedAt, repos })
+
+  const capped = snapshots.slice(-MAX_SNAPSHOTS)
+  await writeFile(
+    HISTORY_OUT,
+    `${JSON.stringify({ schema: 'vibe-hall.star-history.v1', snapshots: capped }, null, 2)}\n`,
+    'utf8',
+  )
+  console.log(`星标快照历史：共 ${capped.length} 条（升星榜需要至少 2 条）`)
+}
+
 async function main() {
   console.log('Fetching public GitHub repositories…')
   const collected = new Map()
+  const previousLive = await readJson(OUT)
 
   for (const { q, label } of QUERIES) {
     try {
@@ -165,8 +214,9 @@ async function main() {
     return
   }
 
+  const fetchedAt = new Date().toISOString()
   const payload = {
-    fetchedAt: new Date().toISOString(),
+    fetchedAt,
     query: QUERIES.map((entry) => entry.label).join(' | '),
     count: projects.length,
     projects,
@@ -174,6 +224,7 @@ async function main() {
 
   await writeFile(OUT, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
   console.log(`Wrote ${projects.length} live records to ${OUT}`)
+  await appendHistory(projects, fetchedAt, previousLive)
 }
 
 await main()

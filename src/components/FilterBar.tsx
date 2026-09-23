@@ -38,8 +38,9 @@ export function FilterBar({
             id="hall-search"
             type="search"
             value={filters.query ?? ''}
-            placeholder="搜索作品、作者、技术栈…（按 / 聚焦）"
+            placeholder="搜索作品、作者、技术栈…"
             aria-label="搜索作品"
+            title="按 / 快速聚焦"
             onChange={(event) => onChange({ query: event.target.value })}
           />
           {(filters.query ?? '') !== '' && (
