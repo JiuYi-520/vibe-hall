@@ -1,0 +1,87 @@
+:root {
+  --font-sans: "Inter", "HarmonyOS Sans SC", "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, -apple-system,
+    sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  --step--2: clamp(0.7rem, 0.68rem + 0.1vw, 0.76rem);
+  --step--1: clamp(0.8rem, 0.78rem + 0.12vw, 0.88rem);
+  --step-0: clamp(0.94rem, 0.9rem + 0.2vw, 1.04rem);
+  --step-1: clamp(1.1rem, 1.02rem + 0.4vw, 1.3rem);
+  --step-2: clamp(1.35rem, 1.2rem + 0.7vw, 1.7rem);
+  --step-3: clamp(1.7rem, 1.4rem + 1.4vw, 2.4rem);
+  --step-4: clamp(2.2rem, 1.7rem + 2.6vw, 3.6rem);
+  --step-5: clamp(2.6rem, 1.9rem + 3.6vw, 4.5rem);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 34px;
+  --radius-pill: 999px;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.44, 1);
+  --dur-1: 140ms;
+  --dur-2: 240ms;
+  --dur-3: 420ms;
+
+  --max-width: 1240px;
+
+  --hue-a: 212;
+  --hue-b: 268;
+  --accent: hsl(212 92% 62%);
+  --accent-2: hsl(268 88% 68%);
+}
+
+:root,
+[data-theme='dark'] {
+  --bg: #06060b;
+  --bg-soft: #0b0b13;
+  --panel: rgba(20, 20, 32, 0.66);
+  --panel-solid: #12121c;
+  --panel-hi: rgba(255, 255, 255, 0.06);
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.18);
+  --ink: #f4f5fb;
+  --ink-soft: #c7cade;
+  --ink-mute: #8f94ad;
+  --ink-faint: #666b82;
+  --shadow-lg: 0 34px 80px -40px rgba(0, 0, 0, 0.9);
+  --shadow-sm: 0 12px 32px -20px rgba(0, 0, 0, 0.8);
+  --glass: saturate(150%) blur(18px);
+  --noise-opacity: 0.045;
+  --scrim: rgba(4, 4, 10, 0.72);
+  --ok: hsl(154 70% 60%);
+  --warn: hsl(38 92% 64%);
+  --mute: hsl(230 12% 62%);
+}
+
+[data-theme='light'] {
+  --bg: #f4f4f1;
+  --bg-soft: #ececeb;
+  --panel: rgba(255, 255, 255, 0.74);
+  --panel-solid: #ffffff;
+  --panel-hi: rgba(12, 12, 24, 0.04);
+  --line: rgba(14, 14, 28, 0.1);
+  --line-strong: rgba(14, 14, 28, 0.2);
+  --ink: #14141f;
+  --ink-soft: #3c3f52;
+  --ink-mute: #6b6f85;
+  --ink-faint: #9a9db0;
+  --shadow-lg: 0 30px 60px -34px rgba(24, 24, 48, 0.34);
+  --shadow-sm: 0 10px 26px -18px rgba(24, 24, 48, 0.3);
+  --glass: saturate(140%) blur(16px);
+  --noise-opacity: 0.03;
+  --scrim: rgba(240, 240, 238, 0.7);
+  --ok: hsl(154 58% 36%);
+  --warn: hsl(32 84% 44%);
+  --mute: hsl(230 10% 46%);
+}

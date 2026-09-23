@@ -1,0 +1,166 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import type { Project } from '../data/types'
+import { categoryMeta } from '../data/categories'
+import { matchesQuery, sortProjects } from '../data/queries'
+import { formatCompact } from '../lib/format'
+
+interface CommandPaletteProps {
+  open: boolean
+  projects: Project[]
+  onClose: () => void
+  onSelect: (slug: string) => void
+}
+
+const HINTS = [
+  { keys: '↑ ↓', label: '选择' },
+  { keys: '↵', label: '打开' },
+  { keys: 'esc', label: '关闭' },
+]
+
+export function CommandPalette({ open, projects, onClose, onSelect }: CommandPaletteProps) {
+  const [query, setQuery] = useState('')
+  const [cursor, setCursor] = useState(0)
+  const listRef = useRef<HTMLUListElement>(null)
+
+  const results = useMemo(() => {
+    const matched = projects.filter((project) => matchesQuery(project, query))
+    return sortProjects(matched, 'trending')
+  }, [projects, query])
+
+  useEffect(() => {
+    setCursor(0)
+  }, [query, open])
+
+  useEffect(() => {
+    if (!open) setQuery('')
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previous
+    }
+  }, [open])
+
+  useEffect(() => {
+    const node = listRef.current?.querySelector<HTMLElement>('[data-active="true"]')
+    node?.scrollIntoView({ block: 'nearest' })
+  }, [cursor, results])
+
+  const commit = (slug: string | undefined) => {
+    if (!slug) return
+    onSelect(slug)
+    onClose()
+  }
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      onClose()
+      return
+    }
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setCursor((current) => (results.length === 0 ? 0 : (current + 1) % results.length))
+      return
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setCursor((current) => (results.length === 0 ? 0 : (current - 1 + results.length) % results.length))
+      return
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      commit(results[cursor]?.slug)
+    }
+  }
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          className="palette"
+          role="dialog"
+          aria-modal="true"
+          aria-label="快速跳转"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.16 }}
+          onKeyDown={onKeyDown}
+        >
+          <div className="palette__scrim" onClick={onClose} aria-hidden="true" />
+          <motion.div
+            className="palette__panel"
+            initial={{ y: 18, scale: 0.98, opacity: 0 }}
+            animate={{ y: 0, scale: 1, opacity: 1 }}
+            exit={{ y: 10, scale: 0.99, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+          >
+            <div className="palette__field">
+              <span aria-hidden="true">⌘</span>
+              <input
+                autoFocus
+                value={query}
+                aria-label="搜索作品、作者或技术栈"
+                placeholder="输入作品名、作者或技术栈…"
+                onChange={(event) => setQuery(event.target.value)}
+              />
+              <span className="palette__count">{results.length}</span>
+            </div>
+
+            <ul className="palette__list" role="listbox" aria-label="搜索结果" ref={listRef}>
+              {results.map((project, index) => {
+                const meta = categoryMeta(project.category)
+                const active = index === cursor
+                return (
+                  <li key={project.id}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={active}
+                      data-active={active}
+                      className={`palette__item ${active ? 'palette__item--active' : ''}`}
+                      onMouseEnter={() => setCursor(index)}
+                      onClick={() => commit(project.slug)}
+                    >
+                      <span
+                        className="palette__glyph"
+                        style={{ ['--hue-a' as string]: meta.hue[0], ['--hue-b' as string]: meta.hue[1] }}
+                        aria-hidden="true"
+                      >
+                        {meta.glyph}
+                      </span>
+                      <span className="palette__text">
+                        <strong>{project.title}</strong>
+                        <em>
+                          {project.maker.name} · {project.stack.slice(0, 3).join(' / ')}
+                        </em>
+                      </span>
+                      <span className="palette__meta">
+                        {project.provenance.source === 'github' ? `★ ${formatCompact(project.stars ?? 0)}` : meta.label}
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
+              {results.length === 0 && <li className="palette__empty">没有找到匹配的作品，换个关键词试试。</li>}
+            </ul>
+
+            <div className="palette__hints">
+              {HINTS.map((hint) => (
+                <span key={hint.label}>
+                  <kbd>{hint.keys}</kbd>
+                  {hint.label}
+                </span>
+              ))}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}

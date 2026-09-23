@@ -1,0 +1,694 @@
+{
+  "fetchedAt": "2026-09-22T07:21:32.514Z",
+  "query": "topic:vibe-coding | vibe coded app | vibe coding work | vibe coded indie work | topic:built-with-claude",
+  "count": 14,
+  "projects": [
+    {
+      "id": "gh-1153416852",
+      "slug": "xintaofei-codeg",
+      "title": "Codeg",
+      "tagline": "Collaborative multi-agent AI coding workspace: aggregate sessions from Claude Code, Codex, OpenC",
+      "story": "仓库自述（原文）：Collaborative multi-agent AI coding workspace: aggregate sessions from Claude Code, Codex, OpenCode, Pi, Grok Build, etc. Desktop app, self-hosted server, or Docker.",
+      "category": "ai",
+      "tags": [
+        "acp",
+        "ade",
+        "agent",
+        "claude code"
+      ],
+      "stack": [
+        "Rust",
+        "Acp",
+        "Ade",
+        "Agent",
+        "Claude Code"
+      ],
+      "maker": {
+        "name": "xintaofei",
+        "handle": "xintaofei",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/247335392?v=4",
+        "url": "https://github.com/xintaofei"
+      },
+      "links": [
+        {
+          "kind": "demo",
+          "label": "打开作品",
+          "url": "https://docs.codeg.app"
+        },
+        {
+          "kind": "repo",
+          "label": "查看源码",
+          "url": "https://github.com/xintaofei/codeg"
+        }
+      ],
+      "createdAt": "2026-02-09",
+      "updatedAt": "2026-09-22",
+      "likes": 0,
+      "stars": 3634,
+      "featured": true,
+      "status": "live",
+      "provenance": {
+        "source": "github",
+        "fetchedAt": "2026-09-22T07:21:14.985Z",
+        "query": "topic:vibe-coding",
+        "repoFullName": "xintaofei/codeg",
+        "htmlUrl": "https://github.com/xintaofei/codeg"
+      }
+    },
+    {
+      "id": "gh-1035890763",
+      "slug": "liu-ziting-what-to-eat",
+      "title": "What To Eat",
+      "tagline": "一饭封神：一个基于 AI 的智能菜谱生成平台，支持中华八大菜系 + 国际料理，提供营养分析、酒水推荐、菜谱效果图生成等全方位烹饪指导。",
+      "story": "仓库自述（原文）：一饭封神：一个基于 AI 的智能菜谱生成平台，支持中华八大菜系 + 国际料理，提供营养分析、酒水推荐、菜谱效果图生成等全方位烹饪指导。",
+      "category": "ai",
+      "tags": [
+        "ai",
+        "gpt",
+        "vibe coding"
+      ],
+      "stack": [
+        "Vue",
+        "Ai",
+        "Gpt",
+        "Vibe Coding"
+      ],
+      "maker": {
+        "name": "liu-ziting",
+        "handle": "liu-ziting",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/57311725?v=4",
+        "url": "https://github.com/liu-ziting"
+      },
+      "links": [
+        {
+          "kind": "demo",
+          "label": "打开作品",
+          "url": "http://eat.lz-t.top"
+        },
+        {
+          "kind": "repo",
+          "label": "查看源码",
+          "url": "https://github.com/liu-ziting/what-to-eat"
+        }
+      ],
+      "createdAt": "2025-08-11",
+      "updatedAt": "2026-01-12",
+      "likes": 0,
+      "stars": 3543,
+      "featured": true,
+      "status": "live",
+      "provenance": {
+        "source": "github",
+        "fetchedAt": "2026-09-22T07:21:14.986Z",
+        "query": "topic:vibe-coding",
+        "repoFullName": "liu-ziting/what-to-eat",
+        "htmlUrl": "https://github.com/liu-ziting/what-to-eat"
+      }
+    },
+    {
+      "id": "gh-997085842",
+      "slug": "stravu-crystal",
+      "title": "Crystal",
+      "tagline": "(Crystal is now Nimbalyst) Run multiple Codex and Claude Code AI sessions in parallel git worktr",
+      "story": "仓库自述（原文）：(Crystal is now Nimbalyst) Run multiple Codex and Claude Code AI sessions in parallel git worktrees. Test, compare approaches & manage AI-assisted development workflows in one desktop app.",
+      "category": "ai",
+      "tags": [
+        "agentic ai",
+        "ai",
+        "ai coding",
+        "anthropic"
+      ],
+      "stack": [
+        "TypeScript",
+        "Agentic Ai",
+        "Ai",
+        "Ai Coding",
+        "Anthropic"
+      ],
+      "maker": {
+        "name": "stravu",
+        "handle": "stravu",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/165948090?v=4",
+        "url": "https://github.com/stravu"
+      },
+      "links": [
+        {
+          "kind": "demo",
+          "label": "打开作品",
+          "url": "https://nimbalyst.com/"
+        },
+        {
+          "kind": "repo",
+          "label": "查看源码",
+          "url": "https://github.com/stravu/crystal"
+        }
+      ],
+      "createdAt": "2025-06-05",
+      "updatedAt": "2026-02-26",
+      "likes": 0,
+      "stars": 3118,
+      "featured": true,
+      "status": "live",
+      "provenance": {
+        "source": "github",
+        "fetchedAt": "2026-09-22T07:21:14.986Z",
+        "query": "topic:vibe-coding",
+        "repoFullName": "stravu/crystal",
+        "htmlUrl": "https://github.com/stravu/crystal"
+      }
+    },
+    {
+      "id": "gh-1178594584",
+      "slug": "lingyichen-ai-aicomicbuilder",
+      "title": "AIComicBuilder",
+      "tagline": "AI-powered animated comic generator — transform scripts into fully animated videos with AI-drive",
+      "story": "仓库自述（原文）：AI-powered animated comic generator — transform scripts into fully animated videos with AI-driven character design, storyboarding, and video synthesis.",
+      "category": "sound",
+      "tags": [
+        "ai animation",
+        "ai animation generator",
+        "ai animation tools",
+        "aicomicbuilder"
+      ],
+      "stack": [
+        "TypeScript",
+        "Ai Animation",
+        "Ai Animation Generator",
+        "Ai Animation Tools",
+        "Aicomicbuilder"
+      ],
+      "maker": {
+        "name": "LingyiChen-AI",
+        "handle": "LingyiChen-AI",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/44161003?v=4",
+        "url": "https://github.com/LingyiChen-AI"
+      },
+      "links": [
+        {
+          "kind": "demo",
+          "label": "打开作品",
+          "url": "https://comic.cturing.cn/en"
+        },
+        {
+          "kind": "repo",
+          "label": "查看源码",
+          "url": "https://github.com/LingyiChen-AI/AIComicBuilder"
+        }
+      ],
+      "createdAt": "2026-03-11",
+      "updatedAt": "2026-04-27",
+      "likes": 0,
+      "stars": 1878,
+      "featured": true,
+      "status": "live",
+      "provenance": {
+        "source": "github",
+        "fetchedAt": "2026-09-22T07:21:19.535Z",
+        "query": "vibe coded app",
+        "repoFullName": "LingyiChen-AI/AIComicBuilder",
+        "htmlUrl": "https://github.com/LingyiChen-AI/AIComicBuilder"
+      }
+    },
+    {
+      "id": "gh-1072945981",
+      "slug": "spec-kitty-spec-kitty",
+      "title": "Spec Kitty",
+      "tagline": "Spec-Driven Development for serious software developers. Spec Coding with with Claude, Cursor, G",
+      "story": "仓库自述（原文）：Spec-Driven Development for serious software developers. Spec Coding with with Claude, Cursor, Gemini, Codex. Kanban dashboard, git worktrees, auto-merge and more.",
+      "category": "data",
+      "tags": [
+        "agentic coding",
+        "ai agents",
+        "ai coding workflow",
+        "ai development dashboard"
+      ],
+      "stack": [
+        "Python",
+        "Agentic Coding",
+        "Ai Agents",
+        "Ai Coding Workflow",
+        "Ai Progress Tracking"
+      ],
+      "maker": {
+        "name": "spec-kitty",
+        "handle": "spec-kitty",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/299193673?v=4",
+        "url": "https://github.com/spec-kitty"
+      },
+      "links": [
+        {
+          "kind": "demo",
+          "label": "打开作品",
+          "url": "https://spec-kitty.ai"
+        },
+        {
+          "kind": "repo",
+          "label": "查看源码",
+          "url": "https://github.com/spec-kitty/spec-kitty"
+        }
+      ],
+      "createdAt": "2025-10-09",
+      "updatedAt": "2026-09-22",
+      "likes": 0,
+      "stars": 1636,
+      "featured": true,
+      "status": "live",
+      "provenance": {
+        "source": "github",
+        "fetchedAt": "2026-09-22T07:21:14.987Z",
+        "query": "topic:vibe-coding",
+        "repoFullName": "spec-kitty/spec-kitty",
+        "htmlUrl": "https://github.com/spec-kitty/spec-kitty"
+      }
+    },
+    {
+      "id": "gh-1264531337",
+      "slug": "alchaincyf-fanbox",
+      "title": "Fanbox",
+      "tagline": "vibe coding 的驾驶舱：左边文件，右边/下边终端，中间看清每一次改动。 / The cockpit for vibe coding: browse files on the left",
+      "story": "仓库自述（原文）：vibe coding 的驾驶舱：左边文件，右边/下边终端，中间看清每一次改动。 / The cockpit for vibe coding: browse files on the left, command agents on the right, watch every change in between.",
+      "category": "ai",
+      "tags": [
+        "agent",
+        "ai",
+        "claude",
+        "codex"
+      ],
+      "stack": [
+        "JavaScript",
+        "Agent",
+        "Ai",
+        "Claude",
+        "Codex"
+      ],
+      "maker": {
+        "name": "alchaincyf",
+        "handle": "alchaincyf",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/127714341?v=4",
+        "url": "https://github.com/alchaincyf"
+      },
+      "links": [
+        {
+          "kind": "demo",
+          "label": "打开作品",
+          "url": "https://github.com/alchaincyf/fanbox/releases/latest"
+        },
+        {
+          "kind": "repo",
+          "label": "查看源码",
+          "url": "https://github.com/alchaincyf/fanbox"
+        }
+      ],
+      "createdAt": "2026-06-10",
+      "updatedAt": "2026-09-03",
+      "likes": 0,
+      "stars": 1017,
+      "featured": true,
+      "status": "live",
+      "provenance": {
+        "source": "github",
+        "fetchedAt": "2026-09-22T07:21:23.532Z",
+        "query": "vibe coding work",
+        "repoFullName": "alchaincyf/fanbox",
+        "htmlUrl": "https://github.com/alchaincyf/fanbox"
+      }
+    },
+    {
+      "id": "gh-1014959488",
+      "slug": "ideaplexa-voicetypr",
+      "title": "Voicetypr",
+      "tagline": "Voicetypr - AI powered offline voice to text dictation tool for busy founders, vibe coders, AI p",
+      "story": "仓库自述（原文）：Voicetypr - AI powered offline voice to text dictation tool for busy founders, vibe coders, AI power users on macos, windows. Alternative to wispr flow and superwhisper.",
+      "category": "ai",
+      "tags": [
+        "reactjs",
+        "shadcn ui",
+        "tailwindcss",
+        "tauri"
+      ],
+      "stack": [
+        "Rust",
+        "Reactjs",
+        "Shadcn Ui",
+        "Tailwindcss",
+        "Tauri"
+      ],
+      "maker": {
+        "name": "ideaplexa",
+        "handle": "ideaplexa",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/195734986?v=4",
+        "url": "https://github.com/ideaplexa"
+      },
+      "links": [
+        {
+          "kind": "demo",
+          "label": "打开作品",
+          "url": "https://voicetypr.com"
+        },
+        {
+          "kind": "repo",
+          "label": "查看源码",
+          "url": "https://github.com/ideaplexa/voicetypr"
+        }
+      ],
+      "createdAt": "2025-07-06",
+      "updatedAt": "2026-09-19",
+      "likes": 0,
+      "stars": 719,
+      "featured": true,
+      "status": "live",
+      "provenance": {
+        "source": "github",
+        "fetchedAt": "2026-09-22T07:21:23.532Z",
+        "query": "vibe coding work",
+        "repoFullName": "ideaplexa/voicetypr",
+        "htmlUrl": "https://github.com/ideaplexa/voicetypr"
+      }
+    },
+    {
+      "id": "gh-1168294481",
+      "slug": "liyupi-yupi-hot-monitor",
+      "title": "Yupi Hot Monitor",
+      "tagline": "2026 年编程导航 AI 编程实战新项目，基于 Node.js + Express + React + OpenRouter 的 AI 热点监控工具，支持多信息源聚合抓取（Twitter /",
+      "story": "仓库自述（原文）：2026 年编程导航 AI 编程实战新项目，基于 Node.js + Express + React + OpenRouter 的 AI 热点监控工具，支持多信息源聚合抓取（Twitter / Bing / HackerNews / B 站等 7+ 平台）、AI 查询扩展、AI 真假识别与相关性分析、WebSocket 实时推送、邮件通知、多维度筛选排序，并将热点监控能力封装为 Agent Skills 技能包。覆盖 Prisma + SQLite 数据库、Socket.io 实时通信、Axios + Cheerio 网页爬虫、OpenRouter 大模型接入、Aceternity UI 炫酷前端、node-cron 定时任务、VSCode Copilot Vibe Coding + MCP",
+      "category": "data",
+      "tags": [
+        "agent skills",
+        "ai",
+        "backend",
+        "frontend"
+      ],
+      "stack": [
+        "TypeScript",
+        "Agent Skills",
+        "Ai",
+        "Backend",
+        "Frontend"
+      ],
+      "maker": {
+        "name": "liyupi",
+        "handle": "liyupi",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/26037703?v=4",
+        "url": "https://github.com/liyupi"
+      },
+      "links": [
+        {
+          "kind": "demo",
+          "label": "打开作品",
+          "url": "https://www.codefather.cn/course/2026625439052627970"
+        },
+        {
+          "kind": "repo",
+          "label": "查看源码",
+          "url": "https://github.com/liyupi/yupi-hot-monitor"
+        }
+      ],
+      "createdAt": "2026-02-27",
+      "updatedAt": "2026-04-16",
+      "likes": 0,
+      "stars": 718,
+      "featured": true,
+      "status": "live",
+      "provenance": {
+        "source": "github",
+        "fetchedAt": "2026-09-22T07:21:23.532Z",
+        "query": "vibe coding work",
+        "repoFullName": "liyupi/yupi-hot-monitor",
+        "htmlUrl": "https://github.com/liyupi/yupi-hot-monitor"
+      }
+    },
+    {
+      "id": "gh-1178592645",
+      "slug": "lingyichen-ai-vibe-coding",
+      "title": "Vibe Coding",
+      "tagline": "AI 时代的 Vibe Coding 实践：使用 Claude Code 从零开发 AI 漫剧生成平台的完整记录，涵盖技术选型、AI 驱动开发、UI 优化与功能迭代全流程。",
+      "story": "仓库自述（原文）：AI 时代的 Vibe Coding 实践：使用 Claude Code 从零开发 AI 漫剧生成平台的完整记录，涵盖技术选型、AI 驱动开发、UI 优化与功能迭代全流程。",
+      "category": "ai",
+      "tags": [
+        "vibe coding",
+        "vibe coding assistant",
+        "vibe coding friendly",
+        "vibe coding tool"
+      ],
+      "stack": [
+        "Vibe Coding",
+        "Vibe Coding Assistant",
+        "Vibe Coding Friendly",
+        "Vibe Coding Tool"
+      ],
+      "maker": {
+        "name": "LingyiChen-AI",
+        "handle": "LingyiChen-AI",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/44161003?v=4",
+        "url": "https://github.com/LingyiChen-AI"
+      },
+      "links": [
+        {
+          "kind": "repo",
+          "label": "查看源码",
+          "url": "https://github.com/LingyiChen-AI/vibe-coding"
+        }
+      ],
+      "createdAt": "2026-03-11",
+      "updatedAt": "2026-05-16",
+      "likes": 0,
+      "stars": 709,
+      "featured": true,
+      "status": "live",
+      "provenance": {
+        "source": "github",
+        "fetchedAt": "2026-09-22T07:21:23.532Z",
+        "query": "vibe coding work",
+        "repoFullName": "LingyiChen-AI/vibe-coding",
+        "htmlUrl": "https://github.com/LingyiChen-AI/vibe-coding"
+      }
+    },
+    {
+      "id": "gh-1105067009",
+      "slug": "deadwavewave-demo2apk",
+      "title": "Demo2apk",
+      "tagline": "Turn your Vibe Coding ideas into runnable Android Apps instantly",
+      "story": "仓库自述（原文）：Turn your Vibe Coding ideas into runnable Android Apps instantly",
+      "category": "ai",
+      "tags": [
+        "apk",
+        "apkdownload",
+        "chatgpt",
+        "demo"
+      ],
+      "stack": [
+        "TypeScript",
+        "Apk",
+        "Apkdownload",
+        "Chatgpt",
+        "Demo"
+      ],
+      "maker": {
+        "name": "DeadWaveWave",
+        "handle": "DeadWaveWave",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/90459902?v=4",
+        "url": "https://github.com/DeadWaveWave"
+      },
+      "links": [
+        {
+          "kind": "repo",
+          "label": "查看源码",
+          "url": "https://github.com/DeadWaveWave/demo2apk"
+        }
+      ],
+      "createdAt": "2025-11-27",
+      "updatedAt": "2026-03-20",
+      "likes": 0,
+      "stars": 634,
+      "featured": true,
+      "status": "live",
+      "provenance": {
+        "source": "github",
+        "fetchedAt": "2026-09-22T07:21:23.532Z",
+        "query": "vibe coding work",
+        "repoFullName": "DeadWaveWave/demo2apk",
+        "htmlUrl": "https://github.com/DeadWaveWave/demo2apk"
+      }
+    },
+    {
+      "id": "gh-1091872231",
+      "slug": "coolver-home-assistant-vibecode-agent",
+      "title": "Home Assistant Vibecode Agent",
+      "tagline": "Home Assistant MCP server agent. Enable Claude Code, Cursor, VS Code or any MCP-enabled IDE to h",
+      "story": "仓库自述（原文）：Home Assistant MCP server agent. Enable Claude Code, Cursor, VS Code or any MCP-enabled IDE to help you vibe-code and manage Home Assistant: create and debug automations, design dashboards, tweak themes, modify configs, and deploy changes using natural language",
+      "category": "data",
+      "tags": [
+        "claude",
+        "claudecode",
+        "cursor ai",
+        "home assistant"
+      ],
+      "stack": [
+        "Python",
+        "Claude",
+        "Claudecode",
+        "Cursor Ai",
+        "Home Assistant"
+      ],
+      "maker": {
+        "name": "Coolver",
+        "handle": "Coolver",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/86394701?v=4",
+        "url": "https://github.com/Coolver"
+      },
+      "links": [
+        {
+          "kind": "demo",
+          "label": "打开作品",
+          "url": "https://coolver.github.io/home-assistant-vibecode-agent/"
+        },
+        {
+          "kind": "repo",
+          "label": "查看源码",
+          "url": "https://github.com/Coolver/home-assistant-vibecode-agent"
+        }
+      ],
+      "createdAt": "2025-11-07",
+      "updatedAt": "2026-09-17",
+      "likes": 0,
+      "stars": 632,
+      "featured": true,
+      "status": "live",
+      "provenance": {
+        "source": "github",
+        "fetchedAt": "2026-09-22T07:21:23.532Z",
+        "query": "vibe coding work",
+        "repoFullName": "Coolver/home-assistant-vibecode-agent",
+        "htmlUrl": "https://github.com/Coolver/home-assistant-vibecode-agent"
+      }
+    },
+    {
+      "id": "gh-1226151883",
+      "slug": "ryantsai-kkterm",
+      "title": "KKTerm",
+      "tagline": "Super-tool for vibe coders & system admins — terminals, SSH, SFTP, RDP/VNC, dashboards, install ",
+      "story": "仓库自述（原文）：Super-tool for vibe coders & system admins — terminals, SSH, SFTP, RDP/VNC, dashboards, install helpers, and a built-in AI assistant.",
+      "category": "data",
+      "tags": [
+        "ai tools",
+        "devops",
+        "local first",
+        "mcp"
+      ],
+      "stack": [
+        "TypeScript",
+        "Ai Tools",
+        "Devops",
+        "Local First",
+        "Mcp"
+      ],
+      "maker": {
+        "name": "ryantsai",
+        "handle": "ryantsai",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/863677?v=4",
+        "url": "https://github.com/ryantsai"
+      },
+      "links": [
+        {
+          "kind": "demo",
+          "label": "打开作品",
+          "url": "https://kkterm.ryantsai.com"
+        },
+        {
+          "kind": "repo",
+          "label": "查看源码",
+          "url": "https://github.com/ryantsai/KKTerm"
+        }
+      ],
+      "createdAt": "2026-05-01",
+      "updatedAt": "2026-09-22",
+      "likes": 0,
+      "stars": 495,
+      "featured": true,
+      "status": "live",
+      "provenance": {
+        "source": "github",
+        "fetchedAt": "2026-09-22T07:21:23.532Z",
+        "query": "vibe coding work",
+        "repoFullName": "ryantsai/KKTerm",
+        "htmlUrl": "https://github.com/ryantsai/KKTerm"
+      }
+    },
+    {
+      "id": "gh-1331581864",
+      "slug": "kronop-vibe-aso",
+      "title": "Vibe Aso",
+      "tagline": "You vibe-coded the app — now vibe the ASO. A Claude Code skill: keyword research, 50-locale App ",
+      "story": "仓库自述（原文）：You vibe-coded the app — now vibe the ASO. A Claude Code skill: keyword research, 50-locale App Store metadata, localized screenshots, worldwide pricing, in-app localization.",
+      "category": "ai",
+      "tags": [],
+      "stack": [
+        "JavaScript"
+      ],
+      "maker": {
+        "name": "Kronop",
+        "handle": "Kronop",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/43390630?v=4",
+        "url": "https://github.com/Kronop"
+      },
+      "links": [
+        {
+          "kind": "repo",
+          "label": "查看源码",
+          "url": "https://github.com/Kronop/vibe-aso"
+        }
+      ],
+      "createdAt": "2026-08-12",
+      "updatedAt": "2026-08-12",
+      "likes": 0,
+      "stars": 416,
+      "featured": true,
+      "status": "live",
+      "provenance": {
+        "source": "github",
+        "fetchedAt": "2026-09-22T07:21:27.031Z",
+        "query": "vibe coded indie work",
+        "repoFullName": "Kronop/vibe-aso",
+        "htmlUrl": "https://github.com/Kronop/vibe-aso"
+      }
+    },
+    {
+      "id": "gh-1013619389",
+      "slug": "maciej-trebacz-tower-of-time-game",
+      "title": "Tower Of Time Game",
+      "tagline": "Vibe coded Tower Defense type of game made for a game jam",
+      "story": "仓库自述（原文）：Vibe coded Tower Defense type of game made for a game jam",
+      "category": "game",
+      "tags": [],
+      "stack": [
+        "TypeScript"
+      ],
+      "maker": {
+        "name": "maciej-trebacz",
+        "handle": "maciej-trebacz",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/1614514?v=4",
+        "url": "https://github.com/maciej-trebacz"
+      },
+      "links": [
+        {
+          "kind": "repo",
+          "label": "查看源码",
+          "url": "https://github.com/maciej-trebacz/tower-of-time-game"
+        }
+      ],
+      "createdAt": "2025-07-04",
+      "updatedAt": "2025-07-04",
+      "likes": 0,
+      "stars": 372,
+      "featured": true,
+      "status": "live",
+      "provenance": {
+        "source": "github",
+        "fetchedAt": "2026-09-22T07:21:27.031Z",
+        "query": "vibe coded indie work",
+        "repoFullName": "maciej-trebacz/tower-of-time-game",
+        "htmlUrl": "https://github.com/maciej-trebacz/tower-of-time-game"
+      }
+    }
+  ]
+}

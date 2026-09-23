@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.vite/
+*.local
+node_modules/.tmp/
+screenshots/
