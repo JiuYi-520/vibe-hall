@@ -13,13 +13,15 @@ interface ProjectCardProps {
   view?: 'grid' | 'list'
   /** 当前搜索词：命中部分会高亮。 */
   highlight?: string
+  /** 本条展品的评论数（来自本机互动记录 + 演示评论）。 */
+  commentCount?: number
 }
 
 /**
  * 倾斜与光斑直接在 DOM 上写 CSS 变量（每帧最多一次），
  * 不触发 React 重渲染，也不依赖动画库，卡片数量增加时主线程开销保持恒定。
  */
-export function ProjectCard({ project, index, view = 'grid', highlight }: ProjectCardProps) {
+export function ProjectCard({ project, index, view = 'grid', highlight, commentCount = 0 }: ProjectCardProps) {
   const ref = useRef<HTMLDivElement>(null)
   const frame = useRef(0)
   const reduced = usePrefersReducedMotion()
@@ -111,6 +113,7 @@ export function ProjectCard({ project, index, view = 'grid', highlight }: Projec
               {typeof project.stars === 'number' && project.stars > 0 && (
                 <span title="GitHub 星标">★ {formatCompact(project.stars)}</span>
               )}
+              {commentCount > 0 && <span title="评论数">💬 {formatCompact(commentCount)}</span>}
               <time dateTime={project.createdAt}>{formatDate(project.createdAt)}</time>
             </span>
           </div>

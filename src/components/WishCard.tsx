@@ -10,7 +10,8 @@ import { formatDate } from '../lib/format'
 interface WishCardProps {
   wish: Wish
   projects: Project[]
-  onCheer: (id: string) => void
+  onToggleCheer: (id: string) => void
+  cheered: boolean
   onClaim: (id: string, maker: { name: string; handle: string }, note: string) => string | null
   onDeliver: (id: string, delivery: { projectSlug?: string; note?: string }) => string | null
   /** 本机身份：用来预填接单署名。 */
@@ -23,7 +24,7 @@ interface WishCardProps {
  * 一张愿望卡：贴愿望的人、想要的人数、接单与交付都在这张卡里完成。
  * 接单/交付表单就地展开，避免跳页面丢掉上下文。
  */
-export function WishCard({ wish, projects, onCheer, onClaim, onDeliver, me, focused }: WishCardProps) {
+export function WishCard({ wish, projects, onToggleCheer, cheered, onClaim, onDeliver, me, focused }: WishCardProps) {
   const [claimOpen, setClaimOpen] = useState(false)
   const [deliverOpen, setDeliverOpen] = useState(false)
   const [makerName, setMakerName] = useState(me?.nickname ?? '')
@@ -106,8 +107,14 @@ export function WishCard({ wish, projects, onCheer, onClaim, onDeliver, me, focu
         </span>
         <span className="wish__cheers" data-testid={`wish-cheers-${wish.slug}`}>
           <strong>{wish.cheers}</strong> 人想要
-          <button type="button" className="ghost-btn" onClick={() => onCheer(wish.id)}>
-            我也想要
+          <button
+            type="button"
+            className={`ghost-btn ${cheered ? 'is-on' : ''}`}
+            aria-pressed={cheered}
+            title={cheered ? '再点一次取消' : '点一下表示你也想要'}
+            onClick={() => onToggleCheer(wish.id)}
+          >
+            {cheered ? '已想要' : '我也想要'}
           </button>
         </span>
       </div>

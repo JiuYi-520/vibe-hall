@@ -72,4 +72,19 @@ describe('createForumBoard', () => {
     expect(board.getState().posts[0].likes).toBe(2)
     expect(storage.raw()).toBeNull()
   })
+
+  it('点赞可以取消：再点一次回到原值，重开仍记得', () => {
+    const storage = memoryStorage()
+    const board = createForumBoard({ seeds: [seed], storage })
+    expect(board.isLiked('p1')).toBe(false)
+
+    board.toggleLike('p1')
+    expect(board.isLiked('p1')).toBe(true)
+    expect(board.getState().posts[0].likes).toBe(3)
+
+    const reopened = createForumBoard({ seeds: [seed], storage })
+    expect(reopened.getState().posts[0].likes).toBe(3)
+    reopened.toggleLike('p1')
+    expect(reopened.getState().posts[0].likes).toBe(2)
+  })
 })

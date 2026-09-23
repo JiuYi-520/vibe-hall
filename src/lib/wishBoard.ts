@@ -19,6 +19,8 @@ export interface WishBoard {
   claim(id: string, maker: { name: string; handle: string }, note: string, now?: Date): WishActionResult
   deliver(id: string, actorHandle: string, delivery: { projectSlug?: string; url?: string; note?: string }, now?: Date): WishActionResult
   cheer(id: string): void
+  isCheered(id: string): boolean
+  toggleCheer(id: string): void
   reset(): void
   exportJson(at?: string): string
 }
@@ -107,6 +109,12 @@ export function createWishBoard({
     cheer(id) {
       if (!find(id)) return
       patch = { ...patch, cheers: { ...patch.cheers, [id]: (patch.cheers[id] ?? 0) + 1 } }
+      persist()
+    },
+    isCheered: (id) => Boolean(patch.cheered?.[id]),
+    toggleCheer(id) {
+      if (!find(id)) return
+      patch = { ...patch, cheered: { ...patch.cheered, [id]: !patch.cheered?.[id] } }
       persist()
     },
     reset() {

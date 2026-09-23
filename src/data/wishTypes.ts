@@ -82,6 +82,8 @@ export interface WishPatch {
   claims: Record<string, WishClaim>
   deliveries: Record<string, WishDelivery>
   cheers: Record<string, number>
+  /** 我是否给这条愿望按过「我也想要」（可取消）。 */
+  cheered: Record<string, boolean>
 }
 
 export type WishSortKey = 'newest' | 'cheers' | 'open-first'

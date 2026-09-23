@@ -128,7 +128,7 @@ export function WishesPage({ board = defaultBoard, identity = defaultIdentity, p
           说清你想要什么，等人接单
         </h1>
         <p className="wishes__lead enter" style={{ ['--i' as string]: 2 }}>
-          贴出你想要什么。有人接了单、做出来挂回大厅，这条愿望就变成「已交付」。
+          贴出你想要什么，等人接单。
         </p>
         <div className="wishes__actions enter" style={{ ['--i' as string]: 3 }}>
           <button type="button" className="btn btn--primary" onClick={() => setFormOpen((open) => !open)}>
@@ -327,7 +327,8 @@ export function WishesPage({ board = defaultBoard, identity = defaultIdentity, p
               key={wish.id}
               wish={wish}
               projects={projects}
-              onCheer={(id) => board.cheer(id)}
+              onToggleCheer={(id) => board.toggleCheer(id)}
+              cheered={Boolean(board.getState().patch.cheered?.[wish.id])}
               onClaim={claim}
               onDeliver={deliver}
               me={profile}

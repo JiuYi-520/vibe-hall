@@ -114,7 +114,9 @@ describe('applyForumPatch', () => {
 })
 
 describe('filterPosts / sortPosts / forumStats', () => {
-  const today = new Date().toISOString().slice(0, 10)
+  // 用本地日期：应用内部的 stamp() 也是本地口径，UTC 会在跨零点时对不上
+  const now = new Date()
+  const today = new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10)
   const posts = [
     makePost({ id: 'a', slug: 'a', createdAt: today, likes: 1 }),
     makePost({

@@ -45,6 +45,8 @@ export interface ForumPatch {
   created: ForumPost[]
   replies: Record<string, ForumReply[]>
   likes: Record<string, number>
+  /** 我是否给这条帖子点过赞（可取消）。 */
+  liked: Record<string, boolean>
 }
 
 export type ForumSortKey = 'newest' | 'active' | 'likes'

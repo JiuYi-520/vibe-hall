@@ -45,7 +45,7 @@ export function StarsPage({ projects = bundle.projects, history = starHistory }:
       <header className="stars__head">
         <h1>GitHub 升星榜</h1>
         <p className="stars__lead">
-          公开仓库按真实快照统计。每次 <code>npm run fetch:github</code> 追加一次快照，两次以上才能算「升了多少」。
+          每次 <code>npm run fetch:github</code> 追加一次快照；两次以上才能算「升了多少」。
         </p>
       </header>
 

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import type { Project } from '../data/types'
 import { loadProjects } from '../data/loadProjects'
@@ -6,6 +6,10 @@ import { categoryMeta, STATUS_META } from '../data/categories'
 import { pickRelated } from '../data/queries'
 import { formatCompact, formatDate, readingTime } from '../lib/format'
 import { useCopy, useScrollProgress } from '../lib/hooks'
+import { type IdentityBoard, identityBoard as defaultIdentity, useIdentity } from '../lib/identityStore'
+import { type InteractionBoard, interactionBoard as defaultInteractions, useInteractions } from '../lib/interactionBoard'
+import { canDeleteComment, listComments } from '../data/interactions'
+import { seedComments } from '../data/interactionSeed'
 import { CoverArt } from '../components/CoverArt'
 import { ProjectCard } from '../components/ProjectCard'
 
@@ -19,16 +23,45 @@ const LINK_LABEL: Record<string, string> = {
 
 interface ProjectPageProps {
   projects?: Project[]
+  interactions?: InteractionBoard
+  identity?: IdentityBoard
 }
 
 const bundle = loadProjects()
 
-export function ProjectPage({ projects = bundle.projects }: ProjectPageProps) {
+export function ProjectPage({
+  projects = bundle.projects,
+  interactions = defaultInteractions,
+  identity = defaultIdentity,
+}: ProjectPageProps) {
   const { slug } = useParams()
   const project = projects.find((item) => item.slug === slug)
   const progress = useScrollProgress()
   const [toast, copy] = useCopy()
   const related = useMemo(() => (project ? pickRelated(projects, project, 3) : []), [projects, project])
+  const profile = useIdentity(identity)
+  const interactionState = useInteractions(interactions)
+  const [commentBody, setCommentBody] = useState('')
+  const [commentIssues, setCommentIssues] = useState<string[]>([])
+
+  const liked = Boolean(slug && interactionState.liked[slug])
+  const comments = project ? listComments(seedComments, interactionState.comments, project.slug) : []
+  const likes = project ? project.likes + (liked ? 1 : 0) : 0
+
+  const submitComment = () => {
+    if (!project || !profile) return
+    const result = interactions.addComment(
+      project.slug,
+      { name: profile.nickname, handle: profile.handle, hue: profile.hue },
+      commentBody,
+    )
+    if (!result.ok) {
+      setCommentIssues(result.issues.map((issue) => issue.detail))
+      return
+    }
+    setCommentIssues([])
+    setCommentBody('')
+  }
 
   if (!project) {
     return (
@@ -80,6 +113,16 @@ export function ProjectPage({ projects = bundle.projects }: ProjectPageProps) {
           <h1>{project.title}</h1>
           <p className="detail__tagline">{project.tagline}</p>
           <div className="detail__actions">
+            <button
+              type="button"
+              className={`btn ${liked ? 'btn--primary' : 'btn--ghost'}`}
+              aria-pressed={liked}
+              title={liked ? '再点一次取消' : '点一下表示喜欢'}
+              onClick={() => project && interactions.toggleLike(project.slug)}
+            >
+              {liked ? '已赞 👍' : '点赞 👍'}
+              <span data-testid="detail-likes">{likes}</span>
+            </button>
             {project.links.map((link) => (
               <a
                 key={link.url}
@@ -208,6 +251,93 @@ export function ProjectPage({ projects = bundle.projects }: ProjectPageProps) {
           </section>
         </aside>
       </div>
+
+      <section className="comments" data-testid="comment-section">
+        <h2>
+          <span aria-hidden="true">💬</span> 评论 {comments.length}
+        </h2>
+
+        {profile ? (
+          <form
+            className="comments__form"
+            onSubmit={(event) => {
+              event.preventDefault()
+              submitComment()
+            }}
+          >
+            <label>
+              <span>评论正文</span>
+              <textarea
+                rows={3}
+                value={commentBody}
+                onChange={(event) => setCommentBody(event.target.value)}
+                placeholder="说说你对这件作品的看法"
+              />
+            </label>
+            <div className="comments__form-actions">
+              <button type="submit" className="btn btn--primary">
+                发表评论
+              </button>
+              <span className="comments__as">
+                以 <strong>{profile.nickname}</strong>
+                {profile.handle && <em>@{profile.handle}</em>} 发表
+              </span>
+            </div>
+            {commentIssues.length > 0 && (
+              <ul className="comments__issues" role="alert">
+                {commentIssues.map((issue) => (
+                  <li key={issue}>{issue}</li>
+                ))}
+              </ul>
+            )}
+          </form>
+        ) : (
+          <div className="comments__form comments__form--locked">
+            <p>
+              设置本机身份后可评论 · <Link to="/me">去设置</Link>
+            </p>
+            <button type="button" className="btn btn--primary" disabled>
+              发表评论
+            </button>
+          </div>
+        )}
+
+        {comments.length > 0 ? (
+          <ul className="comments__list">
+            {comments.map((comment) => (
+              <li
+                key={comment.id}
+                data-testid={`comment-item-${comment.id}`}
+                style={{ ['--hue-a' as string]: comment.author.hue }}
+              >
+                <div className="comments__head">
+                  <span className="post__dot" aria-hidden="true">
+                    {(comment.author.name || '匿').slice(0, 1)}
+                  </span>
+                  <span className="comments__who">
+                    {comment.author.name || '匿名'}
+                    {comment.author.handle && <em>@{comment.author.handle}</em>}
+                  </span>
+                  <time dateTime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
+                  {comment.source === 'local' && <span className="chip chip--live">本机</span>}
+                  {canDeleteComment(comment, profile) && (
+                    <button
+                      type="button"
+                      className="ghost-btn comments__delete"
+                      onClick={() => interactions.deleteComment(comment.id, profile)}
+                    >
+                      删除
+                    </button>
+                  )}
+                </div>
+                <p>{comment.body}</p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="comments__empty">还没有评论。</p>
+        )}
+      </section>
 
       {related.length > 0 && (
         <section className="section">

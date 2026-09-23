@@ -459,15 +459,7 @@ pre {
   max-width: 60ch;
 }
 
-.hero__eyebrow {
-  font-size: var(--step--1);
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--ink-mute);
-}
-
 .hero__title {
-  margin-top: var(--space-3);
   font-size: var(--step-5);
   font-weight: 700;
 }
@@ -480,17 +472,11 @@ pre {
   color: transparent;
 }
 
-.hero__lead {
-  margin-top: var(--space-5);
-  max-width: 56ch;
-  color: var(--ink-soft);
-}
-
 .hero__cta {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
-  margin-top: var(--space-5);
+  margin-top: var(--space-6);
 }
 
 .btn {
@@ -1958,6 +1944,148 @@ pre {
 
 /* ---------- 本机身份 / 论坛 / 个人主页 ---------- */
 
+/* ---------- 展品评论与点赞 ---------- */
+
+.ghost-btn.is-on {
+  color: var(--ink);
+  border-color: hsl(212 92% 62% / 0.55);
+  background: hsl(212 92% 62% / 0.16);
+}
+
+.comments {
+  margin-top: var(--space-7);
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  backdrop-filter: var(--glass);
+}
+
+.comments h2 {
+  font-size: var(--step-1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.comments__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.comments__form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: var(--step--1);
+  color: var(--ink-mute);
+}
+
+.comments__form textarea {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  padding: 0.6rem 0.75rem;
+  outline: none;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color var(--dur-1) var(--ease-out), box-shadow var(--dur-2) var(--ease-out);
+}
+
+.comments__form textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px hsl(212 92% 62% / 0.14);
+}
+
+.comments__form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.comments__as {
+  color: var(--ink-faint);
+  font-size: var(--step--1);
+}
+
+.comments__as em {
+  font-style: normal;
+  color: var(--ink-mute);
+}
+
+.comments__form--locked {
+  align-items: flex-start;
+  padding: var(--space-3) var(--space-4);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--panel-hi);
+  color: var(--ink-mute);
+  font-size: var(--step--1);
+}
+
+.comments__issues {
+  margin: 0;
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+  color: var(--warn);
+  font-size: var(--step--1);
+}
+
+.comments__list {
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.comments__list li {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--panel-hi);
+  border-left: 3px solid hsl(var(--hue-a, 212) 90% 62%);
+}
+
+.comments__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: var(--step--2);
+  color: var(--ink-mute);
+}
+
+.comments__who em {
+  font-style: normal;
+  color: var(--ink-faint);
+}
+
+.comments__head time {
+  color: var(--ink-faint);
+}
+
+.comments__delete {
+  margin-left: auto;
+}
+
+.comments__list p {
+  margin: 0.35rem 0 0;
+  color: var(--ink-soft);
+}
+
+.comments__empty {
+  margin-top: var(--space-4);
+  color: var(--ink-faint);
+  font-size: var(--step--1);
+}
+
 .me-chip {
   display: inline-flex;
   align-items: center;
@@ -3064,6 +3192,14 @@ pre {
   /* 搜索框的 240px 下限在窄屏会把整行撑宽 */
   .search {
     min-width: 0;
+    /* input 默认 size=20 会带来 193px 固有宽度，这里让它完全跟着容器走 */
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .search input {
+    width: 100%;
+    min-width: 0;
   }
 
   .filters__row,
@@ -3093,6 +3229,19 @@ pre {
 
   .segmented button {
     padding: 0.36rem 0.6rem;
+  }
+}
+
+@media (max-width: 420px) {
+  /* 最窄的手机上品牌只留图形标：文字与侧边栏重复，且顶栏放不下 */
+  .brand__text {
+    display: none;
+  }
+
+  .site-header {
+    gap: var(--space-2);
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
   }
 }
 

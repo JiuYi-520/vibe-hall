@@ -1,11 +1,12 @@
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { MePage } from './MePage'
 import { createIdentityBoard } from '../lib/identityStore'
 import { createWishBoard } from '../lib/wishBoard'
 import { createForumBoard } from '../lib/forumBoard'
+import { createInteractionBoard } from '../lib/interactionBoard'
 import type { Wish } from '../data/wishTypes'
 import type { ForumPost } from '../data/forumTypes'
 
@@ -49,12 +50,13 @@ function renderPage() {
   const identity = createIdentityBoard({ storage: memoryStorage() })
   const wishes = createWishBoard({ seeds: [seedWish], storage: memoryStorage() })
   const forum = createForumBoard({ seeds: [seedPost], storage: memoryStorage() })
+  const interactions = createInteractionBoard({ storage: memoryStorage() })
   render(
     <MemoryRouter>
-      <MePage identity={identity} wishes={wishes} forum={forum} />
+      <MePage identity={identity} wishes={wishes} forum={forum} interactions={interactions} />
     </MemoryRouter>,
   )
-  return { identity, wishes, forum }
+  return { identity, wishes, forum, interactions }
 }
 
 describe('MePage', () => {
@@ -113,6 +115,26 @@ describe('MePage', () => {
     await user.click(screen.getByRole('button', { name: '保存身份' }))
     await user.click(screen.getByRole('button', { name: /导出本机数据/ }))
     expect(screen.getByText(/已复制|复制失败/)).toBeInTheDocument()
+  })
+
+  it('导出的本机数据包含展品点赞与评论', async () => {
+    const user = userEvent.setup()
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    const { interactions } = renderPage()
+
+    await user.type(screen.getByLabelText('昵称'), '阿岛')
+    await user.type(screen.getByLabelText('账号'), 'a-dao')
+    await user.click(screen.getByRole('button', { name: '保存身份' }))
+    await act(async () => {
+      interactions.toggleLike('neon-kanban')
+      interactions.addComment('neon-kanban', { name: '阿岛', handle: 'a-dao', hue: 268 }, '先收藏，周末试试。')
+    })
+    await user.click(screen.getByRole('button', { name: /导出本机数据/ }))
+
+    const payload = JSON.parse(writeText.mock.calls[0][0])
+    expect(payload.interactions.liked['neon-kanban']).toBe(true)
+    expect(payload.interactions.comments).toHaveLength(1)
   })
 
   it('只填昵称没填账号时，也能统计我的愿望与帖子', async () => {

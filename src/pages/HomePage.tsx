@@ -5,12 +5,14 @@ import type { Filters, Project } from '../data/types'
 import { buildFacets, computeStats, filterProjects, pickFeatured, rankProjects, sortProjects } from '../data/queries'
 import { loadProjects } from '../data/loadProjects'
 import { activeFilterCount, parseGalleryState, serializeGalleryState, SORT_KEYS, type GalleryState } from '../lib/urlState'
-import { usePalette } from '../lib/paletteContext'
 import { usePrefersReducedMotion } from '../lib/hooks'
 import { formatCompact } from '../lib/format'
 import { FilterBar, SORT_LABEL } from '../components/FilterBar'
 import { ProjectCard } from '../components/ProjectCard'
 import { Marquee } from '../components/Marquee'
+import { useInteractions } from '../lib/interactionBoard'
+import { applyLikes } from '../data/interactions'
+import { seedComments } from '../data/interactionSeed'
 
 interface HomePageProps {
   projects?: Project[]
@@ -26,30 +28,39 @@ export function HomePage({
   fetchedAt = bundle.fetchedAt ?? null,
 }: HomePageProps) {
   const [params, setParams] = useSearchParams()
+  const interactionState = useInteractions()
   const navigate = useNavigate()
-  const palette = usePalette()
   const searchRef = useRef<HTMLInputElement>(null)
   const reduced = usePrefersReducedMotion()
 
   const state = useMemo(() => parseGalleryState(params.toString()), [params])
+  /** 本机点赞叠加到展品自带热度上，卡片与筛选都用叠加后的数据。 */
+  const displayProjects = useMemo(() => applyLikes(projects, interactionState.liked), [projects, interactionState.liked])
+  const commentCounts = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const comment of [...seedComments, ...interactionState.comments]) {
+      map.set(comment.projectSlug, (map.get(comment.projectSlug) ?? 0) + 1)
+    }
+    return map
+  }, [interactionState.comments])
   const filtered = useMemo(
     () =>
-      filterProjects(projects, {
+      filterProjects(displayProjects, {
         query: state.q,
         categories: state.cats,
         stack: state.stack,
         statuses: state.statuses,
         onlyFeatured: state.featured,
       }),
-    [projects, state],
+    [displayProjects, state],
   )
   // 搜索态先按相关性排序，其余情况按用户选的排序方式。
   const ordered = useMemo(
     () => (state.q ? rankProjects(filtered, state.q, state.sort) : sortProjects(filtered, state.sort)),
     [filtered, state.q, state.sort],
   )
-  const facets = useMemo(() => buildFacets(projects), [projects])
-  const stats = useMemo(() => computeStats(projects), [projects])
+  const facets = useMemo(() => buildFacets(displayProjects), [displayProjects])
+  const stats = useMemo(() => computeStats(displayProjects), [displayProjects])
   const featured = useMemo(() => pickFeatured(ordered.filter((project) => project.featured), 4), [ordered])
   const activeCount = activeFilterCount(state)
 
@@ -93,31 +104,19 @@ export function HomePage({
       <section className="hero">
         <div className="hero__aura" aria-hidden="true" />
         <div className="hero__inner">
-          <p className="hero__eyebrow enter" style={{ ['--i' as string]: 0 }}>
-            一人一扇门 · {stats.makers} 位创作者 · {stats.stacks} 种技术栈
-          </p>
-          <h1 className="hero__title enter" style={{ ['--i' as string]: 1 }}>
+          <h1 className="hero__title enter" style={{ ['--i' as string]: 0 }}>
             用自然语言盖起来的
             <span className="hero__title-accent">一整条街</span>
           </h1>
-          <p className="hero__lead enter" style={{ ['--i' as string]: 2 }}>
-            不同的人用自然语言做出来的东西都在这里。点开一扇门，就能看到它是怎么被说出来的。
-          </p>
-          <div className="hero__cta enter" style={{ ['--i' as string]: 3 }}>
+          <div className="hero__cta enter" data-testid="hero-cta" style={{ ['--i' as string]: 1 }}>
             <a className="btn btn--primary" href="#hall" onClick={scrollToHall}>
               进入展馆 ↓
             </a>
-            <button type="button" className="btn btn--ghost" onClick={palette.open}>
-              ⌘K 快速跳转
-            </button>
             <Link className="btn btn--ghost" to="/submit">
               提交我的作品
             </Link>
-            <Link className="btn btn--ghost" to="/wishes">
-              愿望墙
-            </Link>
           </div>
-          <dl className="hero__stats enter" style={{ ['--i' as string]: 4 }}>
+          <dl className="hero__stats enter" style={{ ['--i' as string]: 2 }}>
             <div>
               <dt>馆内展品</dt>
               <dd>{stats.projects}</dd>
@@ -130,7 +129,9 @@ export function HomePage({
               <dt>累计掌声</dt>
               <dd>{formatCompact(stats.reactions)}</dd>
             </div>
-            <div>
+            <div
+              title={liveCount > 0 && fetchedAt ? `真实 GitHub 作品抓取于 ${fetchedAt.slice(0, 16).replace('T', ' ')}` : undefined}
+            >
               <dt>{liveCount > 0 ? 'GitHub 实时' : '数据来源'}</dt>
               <dd>{liveCount > 0 ? `${liveCount} 件` : '示例'}</dd>
             </div>
@@ -138,11 +139,6 @@ export function HomePage({
           {liveCount === 0 && (
             <p className="hero__notice">
               当前是示例数据。运行 <code>npm run fetch:github</code> 拉取真实作品。
-            </p>
-          )}
-          {liveCount > 0 && fetchedAt && (
-            <p className="hero__notice hero__notice--ok">
-              真实 GitHub 作品 {liveCount} 件 · 抓取于 {fetchedAt.slice(0, 16).replace('T', ' ')}
             </p>
           )}
         </div>
@@ -154,7 +150,6 @@ export function HomePage({
           <h2>
             <span aria-hidden="true">▤</span> 展馆大厅
           </h2>
-          <p className="section__hint">筛选状态写进链接，可直接分享。</p>
         </div>
 
         <FilterBar
@@ -170,7 +165,7 @@ export function HomePage({
         <div className="toolbar">
           <p className="toolbar__count" aria-live="polite">
             <strong data-testid="result-count">{ordered.length}</strong>
-            <span> / {projects.length} 件展品</span>
+            <span> / {displayProjects.length} 件展品</span>
             {state.q && <em>· 已按相关性排序</em>}
             {activeCount > 0 && <em>· 已筛选 {activeCount} 项</em>}
           </p>
@@ -218,7 +213,13 @@ export function HomePage({
             </h3>
             <div className="featured__row">
               {featured.map((project, index) => (
-                <ProjectCard key={project.id} project={project} index={index} highlight={state.q} />
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  index={index}
+                  highlight={state.q}
+                  commentCount={commentCounts.get(project.slug) ?? 0}
+                />
               ))}
             </div>
           </div>
@@ -227,7 +228,14 @@ export function HomePage({
         {ordered.length > 0 ? (
           <div className={`grid grid--${state.view}`}>
             {ordered.map((project, index) => (
-              <ProjectCard key={project.id} project={project} index={index} view={state.view} highlight={state.q} />
+              <ProjectCard
+                key={project.id}
+                project={project}
+                index={index}
+                view={state.view}
+                highlight={state.q}
+                commentCount={commentCounts.get(project.slug) ?? 0}
+              />
             ))}
           </div>
         ) : (
@@ -248,9 +256,7 @@ export function HomePage({
         <div className="cta-card">
           <div>
             <h2>你的作品也应该有一扇门</h2>
-            <p>
-              玩具、看板、课堂演示都能挂进来。请附上提示词或迭代记录——这是展馆最想看的部分。
-            </p>
+            <p>挂进来时请附上提示词或迭代记录。</p>
           </div>
           <div className="cta-card__actions">
             <button type="button" className="btn btn--primary" onClick={() => navigate('/submit')}>

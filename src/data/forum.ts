@@ -37,7 +37,7 @@ function hasAuthor(author: ForumAuthor): boolean {
 }
 
 export function emptyForumPatch(): ForumPatch {
-  return { created: [], replies: {}, likes: {} }
+  return { created: [], replies: {}, likes: {}, liked: {} }
 }
 
 export function validateForumDraft(draft: ForumDraft): ForumIssue[] {
@@ -92,10 +92,11 @@ export function applyForumPatch(seeds: ForumPost[], patch: ForumPatch): ForumPos
   const merge = (post: ForumPost): ForumPost => {
     const extraReplies = patch.replies[post.id] ?? []
     const extraLikes = patch.likes[post.id] ?? 0
+    const myLike = patch.liked?.[post.id] ? 1 : 0
     return {
       ...post,
       replies: [...post.replies, ...extraReplies],
-      likes: post.likes + extraLikes,
+      likes: post.likes + extraLikes + myLike,
     }
   }
   return [...patch.created.map(merge), ...seeds.map(merge)]

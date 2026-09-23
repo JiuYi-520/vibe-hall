@@ -22,6 +22,8 @@ export interface ForumBoard {
     now?: Date,
   ): { ok: true; post: ForumPost; reply: ForumReply } | { ok: false; reason: string }
   like(id: string): void
+  isLiked(id: string): boolean
+  toggleLike(id: string): void
   reset(): void
   exportJson(at?: string): string
 }
@@ -101,6 +103,12 @@ export function createForumBoard({
       const post = find(id)
       if (!post) return
       patch = { ...patch, likes: { ...patch.likes, [id]: (patch.likes[id] ?? 0) + 1 } }
+      persist()
+    },
+    isLiked: (id) => Boolean(patch.liked?.[id]),
+    toggleLike(id) {
+      if (!find(id)) return
+      patch = { ...patch, liked: { ...patch.liked, [id]: !patch.liked?.[id] } }
       persist()
     },
     reset() {

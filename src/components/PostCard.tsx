@@ -7,13 +7,14 @@ interface PostCardProps {
   post: ForumPost
   /** 本机身份；没有身份时不能回复。 */
   me: ForumAuthor | null
-  onLike: (id: string) => void
+  onToggleLike: (id: string) => void
+  liked: boolean
   onReply: (id: string, body: string) => string | null
   /** 从命令面板跳进来时高亮这一条。 */
   focused?: boolean
 }
 
-export function PostCard({ post, me, onLike, onReply, focused }: PostCardProps) {
+export function PostCard({ post, me, onToggleLike, liked, onReply, focused }: PostCardProps) {
   const [replyOpen, setReplyOpen] = useState(false)
   const [body, setBody] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -54,8 +55,14 @@ export function PostCard({ post, me, onLike, onReply, focused }: PostCardProps) 
       <p className="post__body">{post.body}</p>
 
       <div className="post__foot">
-        <button type="button" className="ghost-btn" onClick={() => onLike(post.id)}>
-          👍 点赞
+        <button
+          type="button"
+          className={`ghost-btn ${liked ? 'is-on' : ''}`}
+          aria-pressed={liked}
+          title={liked ? '再点一次取消' : '点一下表示喜欢'}
+          onClick={() => onToggleLike(post.id)}
+        >
+          👍 {liked ? '已赞' : '点赞'}
         </button>
         <span className="post__count" data-testid={`post-likes-${post.slug}`}>
           {post.likes}

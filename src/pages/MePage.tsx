@@ -5,12 +5,14 @@ import { countMyContributions } from '../data/forum'
 import { type IdentityBoard, identityBoard as defaultIdentity, useIdentity } from '../lib/identityStore'
 import { type WishBoard, useWishes, wishBoard as defaultWishBoard } from '../lib/wishBoard'
 import { type ForumBoard, forumBoard as defaultForumBoard, useForumPosts } from '../lib/forumBoard'
+import { type InteractionBoard, interactionBoard as defaultInteractions, useInteractions } from '../lib/interactionBoard'
 import { useCopy } from '../lib/hooks'
 
 interface MePageProps {
   identity?: IdentityBoard
   wishes?: WishBoard
   forum?: ForumBoard
+  interactions?: InteractionBoard
 }
 
 const HUE_CHOICES = [212, 268, 318, 168, 38, 12, 192, 286]
@@ -19,9 +21,11 @@ export function MePage({
   identity = defaultIdentity,
   wishes = defaultWishBoard,
   forum = defaultForumBoard,
+  interactions = defaultInteractions,
 }: MePageProps) {
   const profile = useIdentity(identity)
   const forumPosts = useForumPosts(forum)
+  const interactionState = useInteractions(interactions)
   const allWishes = useWishes(wishes)
   const [draft, setDraft] = useState<LocalProfile>(profile ?? EMPTY_PROFILE)
   const [editing, setEditing] = useState(false)
@@ -46,6 +50,7 @@ export function MePage({
       identity: profile,
       wishes: JSON.parse(wishes.exportJson()),
       forum: JSON.parse(forum.exportJson()),
+      interactions: JSON.parse(interactions.exportJson()),
     }
     void copy(JSON.stringify(payload, null, 2), '本机数据')
   }
@@ -54,6 +59,7 @@ export function MePage({
     identity.clear()
     wishes.reset()
     forum.reset()
+    interactions.reset()
     setDraft(EMPTY_PROFILE)
     setEditing(false)
     setIssues([])
@@ -119,6 +125,14 @@ export function MePage({
             <div>
               <dt>我的回复</dt>
               <dd data-testid="me-replies">{mine.replies}</dd>
+            </div>
+            <div>
+              <dt>我点过赞</dt>
+              <dd data-testid="me-likes">{Object.values(interactionState.liked).filter(Boolean).length}</dd>
+            </div>
+            <div>
+              <dt>我写的评论</dt>
+              <dd data-testid="me-comments">{interactionState.comments.length}</dd>
             </div>
           </dl>
         </>

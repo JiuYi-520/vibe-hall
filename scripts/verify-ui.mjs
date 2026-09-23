@@ -43,6 +43,11 @@ await page.goto(`${BASE}/#/`, { waitUntil: 'networkidle' })
 const total = await page.getByTestId('result-count').innerText()
 check('home renders the full hall', Number(total) >= 25, `result-count=${total}`)
 check('hero headline present', (await page.locator('h1').first().innerText()).includes('自然语言'))
+check(
+  '首页英雄区不再有装饰性长文',
+  (await page.locator('.hero__eyebrow, .hero__lead, .hero__notice').count()) === 0,
+  `${await page.locator('.hero__eyebrow, .hero__lead, .hero__notice').count()} 处`,
+)
 const sortLabels = await page.locator('.segmented[aria-label="排序方式"] button').allInnerTexts()
 check(
   '排序与布局文案均为中文',
@@ -456,6 +461,76 @@ const wishScan = await page.evaluate(async () => {
 const wishBlocking = wishScan.filter((item) => item.impact === 'critical' || item.impact === 'serious')
 check('愿望墙 axe-core 无严重问题', wishBlocking.length === 0, wishBlocking.length ? JSON.stringify(wishBlocking) : '0 条严重/致命')
 
+// ---------- 展品：点赞（可取消）+ 评论（可删自己的）----------
+await page.goto(`${BASE}/#/p/neon-kanban`, { waitUntil: 'networkidle' })
+const likesBefore = Number(await page.getByTestId('detail-likes').innerText())
+await page.getByRole('button', { name: /^点赞/ }).click()
+await page.waitForTimeout(300)
+check('展品点赞加一', Number(await page.getByTestId('detail-likes').innerText()) === likesBefore + 1)
+check('点赞后按钮标为已赞', (await page.getByRole('button', { name: /已赞/ }).getAttribute('aria-pressed')) === 'true')
+await page.getByRole('button', { name: /已赞/ }).click()
+await page.waitForTimeout(300)
+check('再点一次取消点赞', Number(await page.getByTestId('detail-likes').innerText()) === likesBefore)
+
+const commentText = '自动化验证：这个霓虹残影我很喜欢。'
+await page.getByLabel('评论正文').fill(commentText)
+await page.getByRole('button', { name: '发表评论' }).click()
+await page.waitForTimeout(400)
+const firstComment = page.locator('[data-testid^="comment-item-"]').first()
+const firstCommentText = await firstComment.innerText()
+check('评论发表后置顶并带本机署名', firstCommentText.includes('自动化验证') && firstCommentText.includes('验证机器人'), firstCommentText.split('\n')[0])
+await page.screenshot({ path: `${OUT}/19-project-comments.png`, fullPage: false })
+
+await page.goto(`${BASE}/#/`, { waitUntil: 'networkidle' })
+check('大厅卡片显示评论数', (await page.locator('.card__metrics').filter({ hasText: '💬' }).count()) > 0)
+
+await page.goto(`${BASE}/#/p/neon-kanban`, { waitUntil: 'networkidle' })
+check(
+  '刷新后评论仍在（写在本机）',
+  (await page.locator('[data-testid^="comment-item-"]').filter({ hasText: '自动化验证' }).count()) === 1,
+)
+await page.locator('[data-testid^="comment-item-"]').first().getByRole('button', { name: '删除' }).click()
+await page.waitForTimeout(400)
+check('可以删除自己的评论', (await page.locator('[data-testid^="comment-item-"]').filter({ hasText: '自动化验证' }).count()) === 0)
+check('演示评论没有删除按钮', (await page.getByRole('button', { name: '删除' }).count()) === 0)
+
+await page.addScriptTag({ path: require.resolve('axe-core/axe.min.js') })
+const detailScan = await page.evaluate(async () => {
+  const results = await window.axe.run(document, {
+    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] },
+  })
+  return results.violations.map((violation) => ({ id: violation.id, impact: violation.impact, targets: violation.nodes.slice(0, 3).map((node) => node.target.join(' ')) }))
+})
+const detailBlocking = detailScan.filter((item) => item.impact === 'critical' || item.impact === 'serious')
+check('展品详情页 axe-core 无严重问题', detailBlocking.length === 0, detailBlocking.length ? JSON.stringify(detailBlocking) : '0 条严重/致命')
+
+// ---------- 愿望墙与论坛的点赞都能取消 ----------
+await page.goto(`${BASE}/#/wishes`, { waitUntil: 'networkidle' })
+const wishCard = page.locator('[data-testid^="wish-card-"]').first()
+const cheerBefore = Number(await wishCard.locator('[data-testid^="wish-cheers-"] strong').innerText())
+await wishCard.getByRole('button', { name: '我也想要' }).click()
+await page.waitForTimeout(300)
+check('愿望墙「我也想要」加一', Number(await wishCard.locator('[data-testid^="wish-cheers-"] strong').innerText()) === cheerBefore + 1)
+await wishCard.getByRole('button', { name: '已想要' }).click()
+await page.waitForTimeout(300)
+check('愿望墙「已想要」可取消', Number(await wishCard.locator('[data-testid^="wish-cheers-"] strong').innerText()) === cheerBefore)
+
+await page.goto(`${BASE}/#/forum`, { waitUntil: 'networkidle' })
+const postCard = page.locator('[data-testid^="post-"]').first()
+const postLikeToggle = postCard.locator('button.ghost-btn').filter({ hasText: /点赞|已赞/ }).first()
+// 前面的步骤可能已经点过这张帖：先归一化到「未赞」再测，避免依赖执行顺序
+if ((await postLikeToggle.getAttribute('aria-pressed')) === 'true') {
+  await postLikeToggle.click()
+  await page.waitForTimeout(300)
+}
+const likeBefore = Number(await postCard.locator('[data-testid^="post-likes-"]').innerText())
+await postLikeToggle.click()
+await page.waitForTimeout(300)
+check('论坛点赞加一', Number(await postCard.locator('[data-testid^="post-likes-"]').innerText()) === likeBefore + 1)
+await postLikeToggle.click()
+await page.waitForTimeout(300)
+check('论坛点赞可取消', Number(await postCard.locator('[data-testid^="post-likes-"]').innerText()) === likeBefore)
+
 const mobile = await browser.newPage({ viewport: { width: 420, height: 900 }, deviceScaleFactor: 2 })
 await mobile.goto(`${BASE}/#/`, { waitUntil: 'networkidle' })
 check('mobile layout renders cards', (await mobile.locator('.card').count()) > 0)
@@ -585,6 +660,8 @@ await browser.close()
           route: info.route,
           width: info.width,
           scrollWidth: document.documentElement.scrollWidth,
+          // 用 clientWidth 比较：innerWidth 含竖向滚动条，会把 15px 的滚动条算成可用宽度
+          clientWidth: document.documentElement.clientWidth,
           innerWidth: window.innerWidth,
           offenders,
         }
@@ -592,7 +669,7 @@ await browser.close()
     )
   }
   await writeFile('screenshots/probe-viewport-stress.json', `${JSON.stringify(stress, null, 2)}\n`, 'utf8')
-  const overflow = stress.filter((item) => item.scrollWidth > item.innerWidth + 1)
+  const overflow = stress.filter((item) => item.scrollWidth > item.clientWidth + 1)
   check('视口压力探针：360/1280 无横向溢出', overflow.length === 0, JSON.stringify(stress))
 
   // 网络：本次探针期间不应有失败请求

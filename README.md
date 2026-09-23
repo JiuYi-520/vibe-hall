@@ -17,9 +17,9 @@ npm install
 npm run dev            # 开发服务器 http://localhost:5173
 npm run build          # 类型检查 + 生产构建（dist/）
 npm run preview        # 预览构建产物 http://localhost:4173
-npm test               # 158 项单元/组件测试
+npm test               # 187 项单元/组件测试
 npm run fetch:github   # 拉取真实 GitHub 作品到 src/data/github-live.json
-npm run verify:ui      # 用真实浏览器（Edge）跑 74 项检查（含 UI 探针）并截图
+npm run verify:ui      # 用真实浏览器（Edge）跑 88 项检查（含 UI 探针）并截图
 npm run measure        # 采集首屏体积 / DOM / 长任务等指标（可与基线对比）
 ```
 
@@ -65,6 +65,19 @@ GitHub 条目的 story 字段是仓库自述原文（带“仓库自述（原文
 ## GitHub 升星榜（`/#/stars`）
 
 ## 侧边栏与布局
+
+## 点赞与评论
+
+| 位置 | 能做什么 | 存储 |
+| --- | --- | --- |
+| 展品详情页 | 点赞（可取消，`aria-pressed` 标记）+ 发表评论 | 本机 `vibe-hall:interactions` |
+| 大厅卡片 | 显示 👍 热度与 💬 评论数 | 同上（点赞叠加到展品自带热度） |
+| 愿望墙 | 「我也想要」可取消 | `vibe-hall:wishes` 的 `cheered` |
+| 论坛 | 帖子点赞可取消 + 就地回复 | `vibe-hall:forum` 的 `liked` / `replies` |
+
+评论规则由纯函数实现并被测试覆盖：空正文、超 240 字、缺署名都会被拦；
+**只能删自己发的评论**——删除按账号判定（双方都有账号时以账号为准，昵称可重名所以不作数），演示评论没有删除按钮。
+评论与点赞同样只存本机，可在 `/#/me` 一并导出或清空（导出字段 `interactions`）。
 
 - 左侧侧边栏承载全部导航（展馆 / 升星榜 / 愿望墙 / 论坛 / 提交作品 / 关于）+ 本机身份入口 + 「隐藏侧边栏」按钮。
 - **可以收起**：顶栏 ☰ 或快捷键 `[` 切换；收起状态写在本机（`vibe-hall:ui`），刷新后保持。

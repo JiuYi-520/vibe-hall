@@ -129,4 +129,22 @@ describe('createWishBoard', () => {
     board.cheer(created.wish.id)
     expect(board.getState().wishes.find((wish) => wish.id === created.wish.id)?.cheers).toBe(1)
   })
+
+  it('“我也想要”可以取消：再点一次回到原值，重开仍记得', () => {
+    const storage = memoryStorage()
+    const board = createWishBoard({ seeds: [seed], storage })
+    expect(board.isCheered('seed-1')).toBe(false)
+
+    board.toggleCheer('seed-1')
+    expect(board.isCheered('seed-1')).toBe(true)
+    expect(board.getState().wishes[0].cheers).toBe(2)
+
+    const reopened = createWishBoard({ seeds: [seed], storage })
+    expect(reopened.isCheered('seed-1')).toBe(true)
+    expect(reopened.getState().wishes[0].cheers).toBe(2)
+
+    reopened.toggleCheer('seed-1')
+    expect(reopened.isCheered('seed-1')).toBe(false)
+    expect(reopened.getState().wishes[0].cheers).toBe(1)
+  })
 })

@@ -162,3 +162,36 @@ describe('HomePage 锚点', () => {
     scrollSpy.mockRestore()
   })
 })
+
+describe('首页英雄区文案', () => {
+  it('删掉装饰性说明：只留标题、两个入口与数据', () => {
+    renderHome()
+    expect(document.querySelector('.hero__eyebrow')).toBeNull()
+    expect(document.querySelector('.hero__lead')).toBeNull()
+
+    const cta = screen.getByTestId('hero-cta')
+    const links = within(cta).getAllByRole('link')
+    expect(links).toHaveLength(2)
+    expect(within(cta).getByRole('link', { name: /进入展馆/ })).toBeInTheDocument()
+    expect(within(cta).getByRole('link', { name: /提交我的作品/ })).toBeInTheDocument()
+    expect(within(cta).queryByRole('button', { name: /快速跳转/ })).toBeNull()
+    expect(within(cta).queryByRole('link', { name: /愿望墙/ })).toBeNull()
+  })
+
+  it('抓取时间收进统计项的 title，而不是单独一行说明', () => {
+    renderHome()
+    expect(screen.getByTitle(/抓取于/)).toBeInTheDocument()
+    expect(document.querySelector('.hero__notice')).toBeNull()
+  })
+
+  it('没有真实数据时仍然保留示例数据提醒', () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<HomePage projects={seedProjects} liveCount={0} fetchedAt={null} />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+    expect(screen.getByText(/示例数据/)).toBeInTheDocument()
+  })
+})

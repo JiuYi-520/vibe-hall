@@ -50,7 +50,7 @@ function stamp(now: Date): string {
 }
 
 export function emptyPatch(): WishPatch {
-  return { created: [], claims: {}, deliveries: {}, cheers: {} }
+  return { created: [], claims: {}, deliveries: {}, cheers: {}, cheered: {} }
 }
 
 export function cheerWish(wish: Wish): Wish {
@@ -138,11 +138,12 @@ export function makeLocalWish(draft: WishDraft, now = new Date(), sequence = 0):
 /** 把三张叠加表（想要数 / 接单 / 交付）作用到一个愿望上；种子和本机贴的愿望用同一条路径。 */
 function applyExtras(wish: Wish, patch: WishPatch): Wish {
   const extraCheers = patch.cheers[wish.id] ?? 0
+  const myCheer = patch.cheered?.[wish.id] ? 1 : 0
   const claim = patch.claims[wish.id] ?? wish.claim
   const delivery = patch.deliveries[wish.id]
   const next: Wish = { ...wish }
 
-  if (extraCheers > 0) next.cheers = wish.cheers + extraCheers
+  if (extraCheers > 0 || myCheer > 0) next.cheers = wish.cheers + extraCheers + myCheer
   if (claim && next.status === 'open') {
     next.status = 'claimed'
     next.claim = claim

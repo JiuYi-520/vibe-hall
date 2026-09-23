@@ -234,7 +234,15 @@ export function ForumPage({ board = defaultBoard, identity = defaultIdentity }: 
       {filtered.length > 0 ? (
         <ul className="forum__list">
           {filtered.map((post) => (
-            <PostCard key={post.id} post={post} me={me} focused={focus === post.slug} onLike={(id) => board.like(id)} onReply={reply} />
+            <PostCard
+              key={post.id}
+              post={post}
+              me={me}
+              focused={focus === post.slug}
+              liked={board.isLiked(post.id)}
+              onToggleLike={(id) => board.toggleLike(id)}
+              onReply={reply}
+            />
           ))}
         </ul>
       ) : (
