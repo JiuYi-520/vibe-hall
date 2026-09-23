@@ -74,8 +74,8 @@ export function usePrefersReducedMotion(): boolean {
   return useSyncExternalStore(subscribeReducedMotion, reducedSnapshot, () => false)
 }
 
-/** Global ⌘K / Ctrl+K listener plus a printable-'/' shortcut for the search box. */
-export function useShortcuts(handlers: { onPalette: () => void; onSearch: () => void }) {
+/** 全局快捷键：⌘K 打开快速跳转、/ 聚焦搜索、[ 收起或展开侧边栏。 */
+export function useShortcuts(handlers: { onPalette: () => void; onSearch: () => void; onToggleSidebar: () => void }) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null
@@ -91,11 +91,33 @@ export function useShortcuts(handlers: { onPalette: () => void; onSearch: () => 
       if (event.key === '/' && !typing && !event.metaKey && !event.ctrlKey) {
         event.preventDefault()
         handlers.onSearch()
+        return
+      }
+      if (event.key === '[' && !typing && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        event.preventDefault()
+        handlers.onToggleSidebar()
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [handlers])
+}
+
+export function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(() =>
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia(query).matches : false,
+  )
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return
+    const media = window.matchMedia(query)
+    const onChange = () => setMatches(media.matches)
+    onChange()
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
+  }, [query])
+
+  return matches
 }
 
 export function useScrollProgress(): number {

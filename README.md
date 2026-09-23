@@ -17,9 +17,9 @@ npm install
 npm run dev            # 开发服务器 http://localhost:5173
 npm run build          # 类型检查 + 生产构建（dist/）
 npm run preview        # 预览构建产物 http://localhost:4173
-npm test               # 147 项单元/组件测试
+npm test               # 158 项单元/组件测试
 npm run fetch:github   # 拉取真实 GitHub 作品到 src/data/github-live.json
-npm run verify:ui      # 用真实浏览器（Edge）跑 62 项运行时检查并截图
+npm run verify:ui      # 用真实浏览器（Edge）跑 74 项检查（含 UI 探针）并截图
 npm run measure        # 采集首屏体积 / DOM / 长任务等指标（可与基线对比）
 ```
 
@@ -63,6 +63,14 @@ GitHub 条目的 story 字段是仓库自述原文（带“仓库自述（原文
 ## 交互与可访问性
 
 ## GitHub 升星榜（`/#/stars`）
+
+## 侧边栏与布局
+
+- 左侧侧边栏承载全部导航（展馆 / 升星榜 / 愿望墙 / 论坛 / 提交作品 / 关于）+ 本机身份入口 + 「隐藏侧边栏」按钮。
+- **可以收起**：顶栏 ☰ 或快捷键 `[` 切换；收起状态写在本机（`vibe-hall:ui`），刷新后保持。
+- 默认策略：宽屏（≥1024px）展开、窄屏默认收起——窄屏下它是抽屉（遮罩 + Esc 关闭 + 换页自动收起），不挡内容。
+- 收起时整块 `inert`，里面的链接不会被 Tab 找到；☰ 带 `aria-expanded` 与 `aria-controls`。
+- 窄屏顶栏精简（隐藏品牌副标题、身份文字与 ⌘K 按钮），保证 360px 下不横向溢出。
 
 三种榜，对应三种可用数据：
 

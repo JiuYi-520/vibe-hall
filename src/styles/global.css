@@ -169,6 +169,139 @@ pre {
 
 /* ---------- header ---------- */
 
+/* ---------- 布局：可隐藏侧边栏 ---------- */
+
+.app-shell {
+  --sidebar-w: 248px;
+}
+
+.app-shell.is-collapsed {
+  --sidebar-w: 0px;
+}
+
+.app-body {
+  padding-left: var(--sidebar-w);
+  transition: padding-left var(--dur-3) var(--ease-out);
+}
+
+.site-sidebar {
+  position: fixed;
+  z-index: 50;
+  inset: 0 auto 0 0;
+  width: 248px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-4);
+  background: color-mix(in srgb, var(--bg) 84%, transparent);
+  backdrop-filter: var(--glass);
+  border-right: 1px solid var(--line);
+  transform: translateX(0);
+  transition: transform var(--dur-3) var(--ease-out);
+}
+
+.site-sidebar.is-hidden {
+  transform: translateX(-100%);
+}
+
+.site-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--space-6);
+}
+
+.site-sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-md);
+  color: var(--ink-mute);
+  font-size: var(--step-0);
+  min-height: 40px;
+  transition: background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
+}
+
+.site-sidebar__link:hover {
+  color: var(--ink);
+  background: var(--panel-hi);
+}
+
+.site-sidebar__link.active {
+  color: var(--ink);
+  background: linear-gradient(120deg, hsl(212 92% 62% / 0.18), hsl(268 88% 68% / 0.16));
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+.site-sidebar__mark {
+  color: var(--accent);
+  font-size: 0.7rem;
+}
+
+.site-sidebar__me {
+  margin-top: auto;
+}
+
+.site-sidebar__me-card {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  min-height: 44px;
+}
+
+.site-sidebar__me-card span:last-child {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+  min-width: 0;
+}
+
+.site-sidebar__me-card strong {
+  font-size: var(--step--1);
+}
+
+.site-sidebar__me-card em {
+  font-style: normal;
+  font-size: var(--step--2);
+  color: var(--ink-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.site-sidebar__hide {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  color: var(--ink-mute);
+  font-size: var(--step--1);
+  cursor: pointer;
+  transition: color var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out);
+}
+
+.site-sidebar__hide:hover {
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.sidebar-scrim {
+  display: none;
+}
+
+.sidebar-toggle {
+  font-size: 1rem;
+}
+
 .site-header {
   position: sticky;
   top: 0;
@@ -307,11 +440,13 @@ pre {
 .hero {
   position: relative;
   padding: clamp(var(--space-6), 7vw, var(--space-8)) 0 var(--space-5);
+  /* 极光背景按百分比外扩，不裁会撑宽文档（视口探针实测 1280px 下越界 174px） */
+  overflow: clip;
 }
 
 .hero__aura {
   position: absolute;
-  inset: -10% -20% auto -20%;
+  inset: -10% 0 auto 0;
   height: 70%;
   background: radial-gradient(60% 60% at 30% 20%, hsl(214 96% 62% / 0.2), transparent 70%),
     radial-gradient(50% 50% at 80% 0%, hsl(292 92% 62% / 0.18), transparent 70%);
@@ -478,6 +613,9 @@ pre {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  /* 别低于 WCAG AA 的最小目标尺寸（探针实测 23px 会被判不合格） */
+  min-height: 24px;
+  padding: 0.15rem 0.3rem;
   font-size: var(--step--1);
   color: var(--ink-mute);
   white-space: nowrap;
@@ -1186,6 +1324,9 @@ pre {
   text-decoration: underline;
   text-decoration-color: var(--line-strong);
   text-underline-offset: 3px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
 }
 
 .site-footer__note {
@@ -2840,6 +2981,27 @@ pre {
 
 /* ---------- responsive ---------- */
 
+@media (max-width: 1024px) {
+  /* 窄屏：侧边栏变成抽屉（内容不再为它让位），并显示遮罩 */
+  .app-body {
+    padding-left: 0;
+  }
+
+  .site-sidebar {
+    width: min(80vw, 300px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .app-shell.is-open .sidebar-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: var(--scrim);
+    backdrop-filter: blur(4px);
+  }
+}
+
 @media (max-width: 1080px) {
   .detail__head,
   .detail__grid,
@@ -2849,29 +3011,6 @@ pre {
 }
 
 @media (max-width: 820px) {
-  /* 导航不再隐藏：换行成第二排并横向滚动，手机上也能切页面 */
-  .site-header {
-    flex-wrap: wrap;
-    row-gap: var(--space-2);
-  }
-
-  .site-nav {
-    order: 3;
-    width: 100%;
-    margin-left: 0;
-    overflow-x: auto;
-    scrollbar-width: none;
-    padding-bottom: 2px;
-  }
-
-  .site-nav::-webkit-scrollbar {
-    display: none;
-  }
-
-  .site-nav a {
-    white-space: nowrap;
-  }
-
   .cmd-trigger__label,
   .hall-count {
     display: none;
@@ -2899,6 +3038,61 @@ pre {
     margin-left: 0;
     width: 100%;
     justify-content: space-between;
+  }
+}
+
+@media (max-width: 560px) {
+  /* 手机上顶栏要放得下：品牌副标题与身份文字让位，只留头像与图标 */
+  .brand__text em,
+  .me-chip__text {
+    display: none;
+  }
+
+  .me-chip {
+    padding: 0.28rem;
+  }
+
+  .site-header {
+    gap: var(--space-2);
+  }
+
+  .brand,
+  .site-actions {
+    min-width: 0;
+  }
+
+  /* 搜索框的 240px 下限在窄屏会把整行撑宽 */
+  .search {
+    min-width: 0;
+  }
+
+  .filters__row,
+  .filters__group {
+    min-width: 0;
+  }
+
+  .brand {
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+
+  .brand__text strong {
+    letter-spacing: 0.08em;
+  }
+
+  /* 手机上不需要 ⌘K 按钮（没有物理键盘），侧边栏已经覆盖全部入口 */
+  .cmd-trigger {
+    display: none;
+  }
+
+  /* 工具栏的分段控件在窄屏换行，否则整行撑宽文档 */
+  .toolbar__controls,
+  .segmented {
+    flex-wrap: wrap;
+  }
+
+  .segmented button {
+    padding: 0.36rem 0.6rem;
   }
 }
 

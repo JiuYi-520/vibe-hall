@@ -1,10 +1,12 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { HashRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { loadProjects } from './data/loadProjects'
-import { useShortcuts, useTheme } from './lib/hooks'
+import { useMediaQuery, useShortcuts, useTheme } from './lib/hooks'
 import { PaletteContext } from './lib/paletteContext'
+import { createUiPrefs } from './lib/uiPrefs'
 import { CommandPalette } from './components/CommandPalette'
 import { SiteHeader } from './components/SiteHeader'
+import { SiteSidebar } from './components/SiteSidebar'
 import { HomePage } from './pages/HomePage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { buildPaletteItems } from './lib/paletteItems'
@@ -43,6 +45,27 @@ function Shell() {
   const [theme, toggleTheme] = useTheme()
   const [paletteOpen, setPaletteOpen] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
+  const narrow = useMediaQuery('(max-width: 1024px)')
+  const prefs = useMemo(
+    () =>
+      createUiPrefs({
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+        width: typeof window !== 'undefined' ? window.innerWidth : 1440,
+      }),
+    [],
+  )
+  const [sidebarOpen, setSidebarOpen] = useState(() => prefs.getOpen())
+
+  useEffect(() => prefs.subscribe(() => setSidebarOpen(prefs.getOpen())), [prefs])
+
+  const toggleSidebar = useCallback(() => prefs.toggle(), [prefs])
+
+  // 窄屏下它是抽屉：换页面后自动收起，别挡着内容。
+  useEffect(() => {
+    if (narrow) prefs.setOpen(false)
+  }, [location.pathname, narrow, prefs])
+
   /**
    * 愿望与帖子的索引按需加载：不把两个存储层和它们的种子数据塞进首屏包，
    * 但打开面板后仍然会订阅更新。
@@ -100,8 +123,9 @@ function Shell() {
           navigate('/')
         }
       },
+      onToggleSidebar: toggleSidebar,
     }),
-    [navigate],
+    [navigate, toggleSidebar],
   )
   useShortcuts(shortcuts)
 
@@ -138,8 +162,22 @@ function Shell() {
         <span className="aurora__noise" />
       </div>
       <ScrollToTop />
-      <SiteHeader theme={theme} onToggleTheme={toggleTheme} count={bundle.projects.length} />
-      <main className="site-main">
+      <div className={`app-shell ${sidebarOpen ? 'is-open' : 'is-collapsed'}`}>
+        <SiteSidebar open={sidebarOpen} narrow={narrow} onClose={toggleSidebar} />
+        <div
+          className="sidebar-scrim"
+          onClick={() => prefs.setOpen(false)}
+          aria-hidden="true"
+        />
+        <div className="app-body">
+          <SiteHeader
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            count={bundle.projects.length}
+            sidebarOpen={sidebarOpen}
+            onToggleSidebar={toggleSidebar}
+          />
+          <main className="site-main">
         <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route
@@ -158,18 +196,18 @@ function Shell() {
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
-      </main>
-      <footer className="site-footer">
-        <p>
-          VIBE HALL v0.1 · 一个 vibecoding 作品展馆 ·{' '}
-          <a href="https://github.com/topics/vibe-coding" target="_blank" rel="noreferrer noopener">
-            GitHub 上的 vibe-coding ↗
-          </a>
-        </p>
-        <p className="site-footer__note">
-          示例数据仅用于展示交互；真实条目以“GitHub 实时”标记，并可追溯到对应仓库。
-        </p>
-      </footer>
+          </main>
+          <footer className="site-footer">
+            <p>
+              VIBE HALL v0.1 · 一个 vibecoding 作品展馆 ·{' '}
+              <a href="https://github.com/topics/vibe-coding" target="_blank" rel="noreferrer noopener">
+                GitHub 上的 vibe-coding ↗
+              </a>
+            </p>
+            <p className="site-footer__note">示例数据仅用于展示交互；真实条目以“GitHub 实时”标记，并可追溯到对应仓库。</p>
+          </footer>
+        </div>
+      </div>
       <CommandPalette open={paletteOpen} items={paletteItems} onClose={paletteApi.close} onSelect={onSelect} />
     </PaletteContext.Provider>
   )

@@ -1,4 +1,4 @@
-import { NavLink, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { usePalette } from '../lib/paletteContext'
 import { useIdentity } from '../lib/identityStore'
 import type { ThemeName } from '../lib/hooks'
@@ -7,14 +7,27 @@ interface SiteHeaderProps {
   theme: ThemeName
   onToggleTheme: () => void
   count: number
+  sidebarOpen: boolean
+  onToggleSidebar: () => void
 }
 
-export function SiteHeader({ theme, onToggleTheme, count }: SiteHeaderProps) {
+export function SiteHeader({ theme, onToggleTheme, count, sidebarOpen, onToggleSidebar }: SiteHeaderProps) {
   const palette = usePalette()
   const profile = useIdentity()
 
   return (
     <header className="site-header">
+      <button
+        type="button"
+        className="icon-btn sidebar-toggle"
+        onClick={onToggleSidebar}
+        aria-expanded={sidebarOpen}
+        aria-controls="site-sidebar"
+        aria-label={sidebarOpen ? '隐藏侧边栏' : '显示侧边栏'}
+        title="显示 / 隐藏侧边栏（快捷键 [）"
+      >
+        ☰
+      </button>
       <Link className="brand" to="/" aria-label="VIBE HALL 首页">
         <span className="brand__mark" aria-hidden="true">
           ◤
@@ -24,17 +37,6 @@ export function SiteHeader({ theme, onToggleTheme, count }: SiteHeaderProps) {
           <em>vibecoding 作品展馆</em>
         </span>
       </Link>
-
-      <nav className="site-nav" aria-label="站点导航">
-        <NavLink to="/" end>
-          展馆
-        </NavLink>
-        <NavLink to="/stars">升星榜</NavLink>
-        <NavLink to="/wishes">愿望墙</NavLink>
-        <NavLink to="/forum">论坛</NavLink>
-        <NavLink to="/submit">提交作品</NavLink>
-        <NavLink to="/about">关于</NavLink>
-      </nav>
 
       <div className="site-actions">
         <Link className="me-chip" to="/me" aria-label={profile ? `我的主页：${profile.nickname}` : '设置本机身份'}>

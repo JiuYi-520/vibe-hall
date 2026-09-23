@@ -5,7 +5,7 @@
  *
  * Usage: npm run verify:ui   (expects a server on http://localhost:4173)
  */
-import { mkdir } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { chromium } from 'playwright-core'
 
@@ -226,7 +226,7 @@ if (liveCount > 0) {
 await page.goto(`${BASE}/#/`, { waitUntil: 'networkidle' })
 const beforeTheme = await page.evaluate(() => document.documentElement.dataset.theme)
 check('initial theme follows the system preference', beforeTheme === 'dark', String(beforeTheme))
-await page.locator('.icon-btn').click()
+await page.locator('.site-actions .icon-btn').click()
 await page.waitForTimeout(700)
 const theme = await page.evaluate(() => document.documentElement.dataset.theme)
 check('theme toggle flips the theme', theme !== beforeTheme && theme === 'light', String(theme))
@@ -243,7 +243,7 @@ const lightScan = await page.evaluate(async () => {
 const lightBlocking = lightScan.filter((item) => item.impact === 'critical' || item.impact === 'serious')
 check('浅色主题 axe-core 无严重问题', lightBlocking.length === 0, lightBlocking.length ? JSON.stringify(lightBlocking) : '0 条严重/致命')
 
-await page.locator('.icon-btn').click()
+await page.locator('.site-actions .icon-btn').click()
 await page.waitForTimeout(500)
 const backTheme = await page.evaluate(() => document.documentElement.dataset.theme)
 check('theme toggle returns to dark', backTheme === 'dark', String(backTheme))
@@ -371,6 +371,26 @@ check('面板跳转后落在愿望墙并高亮该条', page.url().includes('/wis
 await page.screenshot({ path: `${OUT}/16-palette-jump.png`, fullPage: false })
 
 // ---------- 未知路径兜底 ----------
+// ---------- 侧边栏：收起 / 展开 / 持久化 / 快捷键 ----------
+await page.goto(`${BASE}/#/`, { waitUntil: 'networkidle' })
+check('宽屏默认展开侧边栏', (await page.locator('.site-sidebar.is-open').count()) === 1)
+check(
+  '开关按钮带 aria-expanded 与 aria-controls',
+  (await page.locator('.sidebar-toggle').getAttribute('aria-expanded')) === 'true' &&
+    (await page.locator('.sidebar-toggle').getAttribute('aria-controls')) === 'site-sidebar',
+)
+await page.getByRole('button', { name: '隐藏侧边栏' }).first().click()
+await page.waitForTimeout(500)
+check('收起后侧边栏移出且不可聚焦', (await page.locator('.site-sidebar.is-hidden').count()) === 1 && (await page.locator('.site-sidebar[inert]').count()) === 1)
+await page.screenshot({ path: `${OUT}/17-sidebar-hidden.png`, fullPage: false })
+await page.reload({ waitUntil: 'networkidle' })
+await page.waitForTimeout(300)
+check('刷新后仍是收起状态（写入本机）', (await page.locator('.site-sidebar.is-hidden').count()) === 1)
+await page.keyboard.press('[')
+await page.waitForTimeout(500)
+check('快捷键 [ 能重新展开', (await page.locator('.site-sidebar.is-open').count()) === 1)
+await page.screenshot({ path: `${OUT}/18-sidebar-open.png`, fullPage: false })
+
 await page.goto(`${BASE}/#/no-such-page`, { waitUntil: 'networkidle' })
 await page.waitForTimeout(600)
 const notFoundText = await page.locator('main').innerText()
@@ -439,9 +459,16 @@ check('愿望墙 axe-core 无严重问题', wishBlocking.length === 0, wishBlock
 const mobile = await browser.newPage({ viewport: { width: 420, height: 900 }, deviceScaleFactor: 2 })
 await mobile.goto(`${BASE}/#/`, { waitUntil: 'networkidle' })
 check('mobile layout renders cards', (await mobile.locator('.card').count()) > 0)
-const mobileNavVisible = await mobile.locator('.site-nav a:visible').count()
-check('移动端仍能用导航切换页面', mobileNavVisible > 0, `${mobileNavVisible} 个可见导航项`)
+check('窄屏默认收起侧边栏（不挡内容）', (await mobile.locator('.site-sidebar.is-hidden').count()) === 1)
+await mobile.getByRole('button', { name: '显示侧边栏' }).click()
+await mobile.waitForTimeout(400)
+const drawerLinks = await mobile.locator('.site-sidebar a:visible').count()
+check('窄屏点 ☰ 后抽屉里有全部入口', drawerLinks >= 6, `${drawerLinks} 个可见入口`)
 await mobile.screenshot({ path: `${OUT}/10b-mobile-nav.png`, fullPage: false })
+await mobile.getByRole('link', { name: '论坛' }).click()
+await mobile.waitForTimeout(500)
+check('窄屏能靠抽屉切页面', mobile.url().includes('/forum'), mobile.url())
+check('切页后抽屉自动收起', (await mobile.locator('.site-sidebar.is-hidden').count()) === 1)
 await mobile.screenshot({ path: `${OUT}/10-mobile.png`, fullPage: false })
 await mobile.close()
 
@@ -452,6 +479,128 @@ check('reduced motion still renders the hall', (await calm.locator('.card').coun
 await calm.close()
 
 await browser.close()
+
+// ---------- ui-verification 探针：目标尺寸 / 焦点遍历 / 视口压力 / 网络失败 ----------
+{
+  const probeBrowser = await chromium.launch({ channel: 'msedge', headless: true })
+  const probe = await probeBrowser.newPage({ viewport: { width: 1280, height: 900 }, colorScheme: 'dark' })
+  const failedRequests = []
+  probe.on('response', (response) => {
+    if (response.status() >= 400) failedRequests.push(`${response.status()} ${response.url()}`)
+  })
+  await probe.goto(`${BASE}/#/`, { waitUntil: 'networkidle' })
+
+  // 目标尺寸：可见交互元素的边界框（不含伪元素撑开的额外命中区，这点在报告里注明）
+  const targets = await probe.evaluate(() => {
+    const nodes = [...document.querySelectorAll('a[href], button, input, select, textarea, [role="button"]')]
+    const measured = nodes
+      .filter((node) => {
+        const rect = node.getBoundingClientRect()
+        return rect.width > 0 && rect.height > 0 && node.getClientRects().length > 0
+      })
+      .map((node) => {
+        const rect = node.getBoundingClientRect()
+        return {
+          label: (node.getAttribute('aria-label') || node.textContent || node.tagName).trim().slice(0, 24),
+          w: Math.round(rect.width),
+          h: Math.round(rect.height),
+        }
+      })
+    return { total: measured.length, under24: measured.filter((item) => item.w < 24 || item.h < 24), under44: measured.filter((item) => item.w < 44 || item.h < 44) }
+  })
+  await writeFile('screenshots/probe-target-size.json', `${JSON.stringify(targets, null, 2)}\n`, 'utf8')
+  check(
+    '目标尺寸探针：可见交互元素都不小于 24x24',
+    targets.under24.length === 0,
+    `${targets.total} 个元素，<24px 的 ${targets.under24.length} 个${targets.under24.length ? ': ' + JSON.stringify(targets.under24.slice(0, 5)) : ''}`,
+  )
+
+  // 焦点遍历：Tab 走 12 步，每步都要有可见焦点环且停在视口内
+  const walk = []
+  await probe.evaluate(() => document.body.focus())
+  for (let index = 0; index < 12; index += 1) {
+    await probe.keyboard.press('Tab')
+    walk.push(
+      await probe.evaluate(() => {
+        const element = document.activeElement
+        if (!(element instanceof HTMLElement)) return { label: 'none', ring: false, inView: false }
+        const style = getComputedStyle(element)
+        const rect = element.getBoundingClientRect()
+        const ring = style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0
+        return {
+          label: (element.getAttribute('aria-label') || element.textContent || element.tagName).trim().slice(0, 24),
+          ring,
+          inView: rect.top >= -1 && rect.bottom <= window.innerHeight + 1,
+        }
+      }),
+    )
+  }
+  await writeFile('screenshots/probe-focus-walk.json', `${JSON.stringify(walk, null, 2)}\n`, 'utf8')
+  const noRing = walk.filter((step) => !step.ring)
+  check('焦点遍历探针：每一步都有可见焦点环', noRing.length === 0, noRing.length ? JSON.stringify(noRing.slice(0, 3)) : `12 步全部有焦点环`)
+
+  // 视口压力：两个宽度都不能出现横向溢出
+  const stress = []
+  for (const [route, width] of [
+    ['/', 360],
+    ['/', 1280],
+    ['/forum', 1280],
+  ]) {
+    await probe.setViewportSize({ width, height: 900 })
+    await probe.goto(`${BASE}/#${route}`, { waitUntil: 'networkidle' })
+    stress.push(
+      await probe.evaluate((info) => {
+        const clipped = (node) => {
+          let parent = node.parentElement
+          while (parent && parent !== document.documentElement) {
+            if (getComputedStyle(parent).overflowX !== 'visible') return true
+            parent = parent.parentElement
+          }
+          return false
+        }
+        const offenders = [...document.querySelectorAll('body *')]
+          .map((node) => {
+            const rect = node.getBoundingClientRect()
+            const path = []
+            let cursor = node
+            while (cursor && cursor !== document.body && path.length < 5) {
+              path.unshift(`${cursor.tagName.toLowerCase()}${cursor.className ? '.' + String(cursor.className).split(' ').join('.') : ''}`)
+              cursor = cursor.parentElement
+            }
+            return {
+              tag: node.tagName.toLowerCase(),
+              cls: (node.getAttribute('class') || '').slice(0, 40),
+              path: path.join(' > ').slice(0, 120),
+              left: Math.round(rect.left),
+              right: Math.round(rect.right),
+              width: Math.round(rect.width),
+              clipped: clipped(node),
+            }
+          })
+          // 只报真正撑宽文档的：右边越界且没有任何祖先在裁剪
+          .filter((item) => item.right > window.innerWidth + 1 && item.width > 0 && !item.clipped)
+          .sort((a, b) => b.right - a.right)
+          .slice(0, 5)
+        return {
+          route: info.route,
+          width: info.width,
+          scrollWidth: document.documentElement.scrollWidth,
+          innerWidth: window.innerWidth,
+          offenders,
+        }
+      }, { route, width }),
+    )
+  }
+  await writeFile('screenshots/probe-viewport-stress.json', `${JSON.stringify(stress, null, 2)}\n`, 'utf8')
+  const overflow = stress.filter((item) => item.scrollWidth > item.innerWidth + 1)
+  check('视口压力探针：360/1280 无横向溢出', overflow.length === 0, JSON.stringify(stress))
+
+  // 网络：本次探针期间不应有失败请求
+  await writeFile('screenshots/probe-network.json', `${JSON.stringify(failedRequests, null, 2)}\n`, 'utf8')
+  check('网络探针：没有失败请求', failedRequests.length === 0, failedRequests.length ? failedRequests.join(' | ') : '0 条 >=400')
+
+  await probeBrowser.close()
+}
 
 const failures = results.filter((item) => !item.passed)
 console.log(`\n${results.length - failures.length}/${results.length} runtime checks passed`)
