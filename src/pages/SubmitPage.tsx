@@ -78,8 +78,8 @@ export function SubmitPage() {
       <header className="submit__head">
         <h1>提交你的作品</h1>
         <p>
-          第一版不接后端：填完表单会在本地生成一条符合展馆 schema 的 JSON，复制它就能贴进
-          GitHub Issue / Pull Request。展馆只要求一件事——请把提示词或迭代过程一起交上来。
+          第一版不接后端：填完表单会在本地生成一条符合展馆数据格式的 JSON，复制它就能贴进
+          GitHub 议题（Issue）或合并请求（Pull Request）。展馆只要求一件事——请把提示词或迭代过程一起交上来。
         </p>
       </header>
 
@@ -109,8 +109,8 @@ export function SubmitPage() {
               <input value={form.makerName} onChange={(event) => set('makerName', event.target.value)} placeholder="你的名字" />
             </label>
             <label>
-              <span>社交 handle *</span>
-              <input value={form.makerHandle} onChange={(event) => set('makerHandle', event.target.value)} placeholder="例如 github 用户名" />
+              <span>社交账号 *</span>
+              <input value={form.makerHandle} onChange={(event) => set('makerHandle', event.target.value)} placeholder="例如 GitHub 用户名" />
             </label>
           </div>
           <div className="submit__row">

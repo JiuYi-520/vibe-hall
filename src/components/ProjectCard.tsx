@@ -104,7 +104,7 @@ export function ProjectCard({ project, index, view = 'grid' }: ProjectCardProps)
             <span className="card__metrics">
               {project.likes > 0 && <span title="鼓掌数">👏 {formatCompact(project.likes)}</span>}
               {typeof project.stars === 'number' && project.stars > 0 && (
-                <span title="GitHub stars">★ {formatCompact(project.stars)}</span>
+                <span title="GitHub 星标">★ {formatCompact(project.stars)}</span>
               )}
               <time dateTime={project.createdAt}>{formatDate(project.createdAt)}</time>
             </span>

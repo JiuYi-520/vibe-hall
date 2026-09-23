@@ -38,6 +38,12 @@ await page.goto(`${BASE}/#/`, { waitUntil: 'networkidle' })
 const total = await page.getByTestId('result-count').innerText()
 check('home renders the full hall', Number(total) >= 25, `result-count=${total}`)
 check('hero headline present', (await page.locator('h1').first().innerText()).includes('自然语言'))
+const sortLabels = await page.locator('.segmented[aria-label="排序方式"] button').allInnerTexts()
+check(
+  '排序与布局文案均为中文',
+  sortLabels.length === 5 && sortLabels.every((label) => !/[A-Za-z]/.test(label)),
+  sortLabels.join(' / '),
+)
 await page.screenshot({ path: `${OUT}/01-home-dark.png`, fullPage: false })
 
 await page.locator('#hall').scrollIntoViewIfNeeded()
@@ -140,7 +146,7 @@ check('submit form blocks an empty draft', (await page.locator('.submit__issues'
 await page.getByLabel('作品名 *').fill('潮汐时钟')
 await page.getByLabel('一句话介绍 *').fill('只显示下一次涨潮的时钟')
 await page.getByLabel('作者名 *').fill('Hana')
-await page.getByLabel('社交 handle *').fill('hana-tide')
+await page.getByLabel('社交账号 *').fill('hana-tide')
 await page.getByLabel('技术栈（逗号分隔）*').fill('Svelte, Vite')
 await page.getByLabel('作品链接').fill('https://example.com/tide-clock')
 await page.getByLabel('制作故事 *').fill('第一版只有倒计时，第三版才把留白调好。')

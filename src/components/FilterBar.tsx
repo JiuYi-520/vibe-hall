@@ -130,6 +130,6 @@ export const SORT_LABEL: Record<SortKey, string> = {
   trending: '热度',
   newest: '最新',
   oldest: '最早',
-  stars: 'Stars',
-  az: 'A→Z',
+  stars: '星标',
+  az: '名称',
 }
