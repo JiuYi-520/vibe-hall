@@ -29,6 +29,11 @@ await page.goto(`${BASE}/#/`, { waitUntil: 'networkidle' })
 await page.locator('.card').first().waitFor({ state: 'visible' })
 const interactiveMs = Date.now() - started
 
+// 首屏只算「页面已经能看见卡片」之前完成的请求；之后（例如打开 ⌘K 才取的索引）单独统计
+const firstPaint = [...transfers]
+const sumBytes = (list, type) =>
+  list.filter((item) => item.type === type).reduce((total, item) => total + item.bytes, 0)
+
 const paint = await page.evaluate(() => {
   const fcp = performance.getEntriesByName('first-contentful-paint')[0]
   const navigation = performance.getEntriesByType('navigation')[0]
@@ -102,14 +107,15 @@ await page.locator('.palette__item').first().waitFor({ state: 'visible' })
 const paletteMs = Date.now() - paletteStart
 await page.keyboard.press('Escape')
 
-const js = transfers.filter((item) => item.type === 'js')
-const css = transfers.filter((item) => item.type === 'css')
+const js = firstPaint.filter((item) => item.type === 'js')
+const css = firstPaint.filter((item) => item.type === 'css')
 const metrics = {
   label,
   at: new Date().toISOString(),
   jsFiles: js.length,
   jsBytes: js.reduce((sum, item) => sum + item.bytes, 0),
   cssBytes: css.reduce((sum, item) => sum + item.bytes, 0),
+  deferredJsBytes: sumBytes(transfers, 'js') - sumBytes(firstPaint, 'js'),
   largestJs: js.sort((a, b) => b.bytes - a.bytes).slice(0, 3).map((item) => `${item.url}:${item.bytes}`),
   interactiveMs,
   paletteMs,

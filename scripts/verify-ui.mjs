@@ -158,6 +158,15 @@ check(
 )
 await page.screenshot({ path: `${OUT}/05-command-palette.png` })
 
+// 面板应当同时能跳页面，而不是只搜展品
+const paletteInput = '搜索页面、作品、愿望或帖子'
+await page.getByLabel(paletteInput).fill('论坛')
+await page.waitForTimeout(300)
+const paletteHasPage = await page.locator('.palette__item', { hasText: '论坛' }).count()
+check('命令面板能跳到页面', paletteHasPage > 0, `${paletteHasPage} 条匹配`)
+await page.getByLabel(paletteInput).fill('')
+await page.waitForTimeout(200)
+
 // 焦点陷阱 + 关闭后焦点归还（真实浏览器里验一遍）
 let stayedInside = true
 for (let index = 0; index < 20; index += 1) {
@@ -186,7 +195,7 @@ check(
 
 await page.keyboard.press('Control+k')
 await page.waitForTimeout(300)
-await page.getByLabel('搜索作品、作者或技术栈').fill('潮汐')
+await page.getByLabel(paletteInput).fill('潮汐')
 await page.waitForTimeout(300)
 const highlighted = await page.locator('.palette__item .hl').first().innerText()
 check('搜索结果命中部分高亮', highlighted.includes('潮汐'), highlighted)
@@ -349,6 +358,25 @@ const starScan = await page.evaluate(async () => {
 const starBlocking = starScan.filter((item) => item.impact === 'critical' || item.impact === 'serious')
 check('升星榜 axe-core 无严重问题', starBlocking.length === 0, starBlocking.length ? JSON.stringify(starBlocking) : '0 条严重/致命')
 
+// 面板可以直接跳到愿望并高亮那一条
+await page.keyboard.press('Control+k')
+await page.waitForTimeout(500)
+await page.getByLabel('搜索页面、作品、愿望或帖子').fill('阅读划线')
+await page.waitForTimeout(400)
+const wishHit = page.locator('.palette__item').filter({ hasText: '阅读划线' }).first()
+check('面板能搜到愿望条目', (await wishHit.count()) > 0, (await wishHit.count()) > 0 ? '命中' : '未命中')
+await wishHit.click()
+await page.waitForTimeout(600)
+check('面板跳转后落在愿望墙并高亮该条', page.url().includes('/wishes?focus=') && (await page.locator('.wish.is-focused').count()) === 1, page.url())
+await page.screenshot({ path: `${OUT}/16-palette-jump.png`, fullPage: false })
+
+// ---------- 未知路径兜底 ----------
+await page.goto(`${BASE}/#/no-such-page`, { waitUntil: 'networkidle' })
+await page.waitForTimeout(600)
+const notFoundText = await page.locator('main').innerText()
+check('未知路径给出兜底页而不是“没有这扇门”', notFoundText.includes('页面不存在') && !notFoundText.includes('没有这扇门'), notFoundText.split('\n')[0])
+check('兜底页提供回站入口', (await page.getByRole('link', { name: '展开馆' }).count()) > 0)
+
 await page.goto(`${BASE}/#/wishes`, { waitUntil: 'networkidle' })
 const wishTotalBefore = Number(await page.getByTestId('wish-count').innerText())
 check('愿望墙列出愿望', wishTotalBefore > 0, `共 ${wishTotalBefore} 条`)
@@ -411,6 +439,9 @@ check('愿望墙 axe-core 无严重问题', wishBlocking.length === 0, wishBlock
 const mobile = await browser.newPage({ viewport: { width: 420, height: 900 }, deviceScaleFactor: 2 })
 await mobile.goto(`${BASE}/#/`, { waitUntil: 'networkidle' })
 check('mobile layout renders cards', (await mobile.locator('.card').count()) > 0)
+const mobileNavVisible = await mobile.locator('.site-nav a:visible').count()
+check('移动端仍能用导航切换页面', mobileNavVisible > 0, `${mobileNavVisible} 个可见导航项`)
+await mobile.screenshot({ path: `${OUT}/10b-mobile-nav.png`, fullPage: false })
 await mobile.screenshot({ path: `${OUT}/10-mobile.png`, fullPage: false })
 await mobile.close()
 

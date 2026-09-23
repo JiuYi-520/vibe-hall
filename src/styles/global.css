@@ -1256,6 +1256,25 @@ pre {
   overflow-y: auto;
 }
 
+.palette__flat {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.palette__group {
+  padding: 0 0 var(--space-2);
+}
+
+.palette__group-title {
+  margin: var(--space-2) var(--space-3) 0;
+  font-size: var(--step--2);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 500;
+}
+
 .palette__item {
   display: flex;
   align-items: center;
@@ -1315,6 +1334,24 @@ pre {
   padding: var(--space-6);
   text-align: center;
   color: var(--ink-mute);
+}
+
+.is-focused {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: var(--radius-lg);
+}
+
+.notfound h1 {
+  font-size: var(--step-2);
+}
+
+.notfound__links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
 }
 
 .palette__hints {
@@ -2812,8 +2849,27 @@ pre {
 }
 
 @media (max-width: 820px) {
+  /* 导航不再隐藏：换行成第二排并横向滚动，手机上也能切页面 */
+  .site-header {
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+  }
+
   .site-nav {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+
+  .site-nav::-webkit-scrollbar {
     display: none;
+  }
+
+  .site-nav a {
+    white-space: nowrap;
   }
 
   .cmd-trigger__label,

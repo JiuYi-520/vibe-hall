@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import type { ForumAuthor, PostKind } from '../data/forumTypes'
 import { FORUM_SORT_LABEL, POST_KIND_META, POST_KIND_ORDER } from '../data/forum'
 import { countMyContributions, filterPosts, forumStats, sortPosts, validateForumDraft } from '../data/forum'
@@ -25,6 +25,9 @@ const FAIL_TEXT: Record<string, string> = {
 export function ForumPage({ board = defaultBoard, identity = defaultIdentity }: ForumPageProps) {
   const posts = useForumPosts(board)
   const profile = useIdentity(identity)
+  const [params] = useSearchParams()
+  /** 从命令面板跳进来时高亮并滚到那一条。 */
+  const focus = params.get('focus')
   const [query, setQuery] = useState('')
   const [kinds, setKinds] = useState<PostKind[]>([])
   const [sort, setSort] = useState<(typeof SORTS)[number]>('newest')
@@ -42,8 +45,13 @@ export function ForumPage({ board = defaultBoard, identity = defaultIdentity }: 
     [posts, query, kinds, sort],
   )
   const stats = forumStats(posts)
-  const mine = profile ? countMyContributions(posts, profile.handle) : { posts: 0, replies: 0 }
+  const mine = profile ? countMyContributions(posts, profile.handle, profile.nickname) : { posts: 0, replies: 0 }
   const localCount = board.getState().patch.created.length
+
+  useEffect(() => {
+    if (!focus) return
+    document.getElementById(`post-${focus}`)?.scrollIntoView({ block: 'center' })
+  }, [focus, posts.length])
 
   const submit = () => {
     if (!me) {
@@ -226,7 +234,7 @@ export function ForumPage({ board = defaultBoard, identity = defaultIdentity }: 
       {filtered.length > 0 ? (
         <ul className="forum__list">
           {filtered.map((post) => (
-            <PostCard key={post.id} post={post} me={me} onLike={(id) => board.like(id)} onReply={reply} />
+            <PostCard key={post.id} post={post} me={me} focused={focus === post.slug} onLike={(id) => board.like(id)} onReply={reply} />
           ))}
         </ul>
       ) : (

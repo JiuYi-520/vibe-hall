@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import type { CategoryId, Project } from '../data/types'
 import type { Wish, WishSortKey, WishStatus } from '../data/wishTypes'
 import { WISH_SORT_LABEL, WISH_STATUS_META, WISH_STATUS_ORDER } from '../data/wishTypes'
@@ -35,6 +35,9 @@ const FAIL_TEXT: Record<string, string> = {
 export function WishesPage({ board = defaultBoard, identity = defaultIdentity, projects = bundle.projects }: WishesPageProps) {
   const wishes = useWishes(board)
   const profile = useIdentity(identity)
+  const [params] = useSearchParams()
+  /** 从命令面板跳进来时高亮并滚到那一条。 */
+  const focus = params.get('focus')
   const [query, setQuery] = useState('')
   const [statuses, setStatuses] = useState<WishStatus[]>([])
   const [cats, setCats] = useState<CategoryId[]>([])
@@ -60,6 +63,20 @@ export function WishesPage({ board = defaultBoard, identity = defaultIdentity, p
   const stats = wishStats(wishes)
   const facets = useMemo(() => wishCategories(wishes), [wishes])
   const localCount = board.getState().patch.created.length
+
+  useEffect(() => {
+    if (!focus) return
+    document.getElementById(`wish-${focus}`)?.scrollIntoView({ block: 'center' })
+  }, [focus, wishes.length])
+
+  /** 本机身份可能是后设置的：只补空字段，不覆盖用户已经输入的内容。 */
+  useEffect(() => {
+    setDraft((current) => ({
+      ...current,
+      wisherName: current.wisherName || profile?.nickname || '',
+      wisherHandle: current.wisherHandle || profile?.handle || '',
+    }))
+  }, [profile])
 
   const submitDraft = () => {
     const found = validateWishDraft(draft)
@@ -314,6 +331,7 @@ export function WishesPage({ board = defaultBoard, identity = defaultIdentity, p
               onClaim={claim}
               onDeliver={deliver}
               me={profile}
+              focused={focus === wish.slug}
             />
           ))}
         </ul>

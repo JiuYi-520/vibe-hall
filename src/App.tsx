@@ -6,6 +6,10 @@ import { PaletteContext } from './lib/paletteContext'
 import { CommandPalette } from './components/CommandPalette'
 import { SiteHeader } from './components/SiteHeader'
 import { HomePage } from './pages/HomePage'
+import { NotFoundPage } from './pages/NotFoundPage'
+import { buildPaletteItems } from './lib/paletteItems'
+import type { Wish } from './data/wishTypes'
+import type { ForumPost } from './data/forumTypes'
 
 // 详情/提交/关于三个页面按需加载：首屏只下载展馆本身需要的代码。
 const ProjectPage = lazy(() => import('./pages/ProjectPage').then((module) => ({ default: module.ProjectPage })))
@@ -39,6 +43,40 @@ function Shell() {
   const [theme, toggleTheme] = useTheme()
   const [paletteOpen, setPaletteOpen] = useState(false)
   const navigate = useNavigate()
+  /**
+   * 愿望与帖子的索引按需加载：不把两个存储层和它们的种子数据塞进首屏包，
+   * 但打开面板后仍然会订阅更新。
+   */
+  const [index, setIndex] = useState<{ wishes: Wish[]; posts: ForumPost[] }>({ wishes: [], posts: [] })
+
+  useEffect(() => {
+    if (!paletteOpen) return
+    let cancelled = false
+    let stop: (() => void) | undefined
+
+    void (async () => {
+      const [{ wishBoard }, { forumBoard }] = await Promise.all([import('./lib/wishBoard'), import('./lib/forumBoard')])
+      if (cancelled) return
+      const sync = () => setIndex({ wishes: wishBoard.getState().wishes, posts: forumBoard.getState().posts })
+      sync()
+      const offWish = wishBoard.subscribe(sync)
+      const offForum = forumBoard.subscribe(sync)
+      stop = () => {
+        offWish()
+        offForum()
+      }
+    })()
+
+    return () => {
+      cancelled = true
+      stop?.()
+    }
+  }, [paletteOpen])
+
+  const paletteItems = useMemo(
+    () => buildPaletteItems({ projects: bundle.projects, wishes: index.wishes, posts: index.posts }),
+    [bundle.projects, index],
+  )
 
   const paletteApi = useMemo(
     () => ({
@@ -68,8 +106,13 @@ function Shell() {
   useShortcuts(shortcuts)
 
   const onSelect = useCallback(
-    (slug: string) => {
-      navigate(`/p/${slug}`)
+    (id: string) => {
+      const [kind, ...rest] = id.split(':')
+      const value = rest.join(':')
+      if (kind === 'page') navigate(value)
+      else if (kind === 'wish') navigate(`/wishes?focus=${encodeURIComponent(value)}`)
+      else if (kind === 'post') navigate(`/forum?focus=${encodeURIComponent(value)}`)
+      else navigate(`/p/${value}`)
     },
     [navigate],
   )
@@ -112,7 +155,7 @@ function Shell() {
             <Route path="/forum" element={<ForumPage />} />
             <Route path="/me" element={<MePage />} />
             <Route path="/about" element={<AboutPage />} />
-            <Route path="*" element={<ProjectPage projects={bundle.projects} />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
       </main>
@@ -127,7 +170,7 @@ function Shell() {
           示例数据仅用于展示交互；真实条目以“GitHub 实时”标记，并可追溯到对应仓库。
         </p>
       </footer>
-      <CommandPalette open={paletteOpen} projects={bundle.projects} onClose={paletteApi.close} onSelect={onSelect} />
+      <CommandPalette open={paletteOpen} items={paletteItems} onClose={paletteApi.close} onSelect={onSelect} />
     </PaletteContext.Provider>
   )
 }

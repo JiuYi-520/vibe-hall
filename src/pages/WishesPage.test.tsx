@@ -1,9 +1,10 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { WishesPage } from './WishesPage'
 import { createWishBoard } from '../lib/wishBoard'
+import { createIdentityBoard } from '../lib/identityStore'
 import type { Wish } from '../data/wishTypes'
 import { seedProjects } from '../data/seed'
 
@@ -69,6 +70,25 @@ function renderPage(board = createWishBoard({ seeds: wishes, storage: memoryStor
 }
 
 describe('WishesPage', () => {
+  it('设置本机身份后，发愿表单自动带上署名', async () => {
+    const user = userEvent.setup()
+    const board = createWishBoard({ seeds: wishes, storage: memoryStorage() })
+    const identity = createIdentityBoard({ storage: memoryStorage() })
+    render(
+      <MemoryRouter>
+        <WishesPage board={board} identity={identity} projects={seedProjects} />
+      </MemoryRouter>,
+    )
+
+    await act(async () => {
+      identity.save({ nickname: '阿岛', handle: 'a-dao', hue: 268 })
+    })
+    await user.click(screen.getByRole('button', { name: /贴一个新愿望/ }))
+
+    expect(screen.getByLabelText('署名')).toHaveValue('阿岛')
+    expect(screen.getByLabelText('账号')).toHaveValue('a-dao')
+  })
+
   it('列出全部愿望并给出状态统计', () => {
     renderPage()
     expect(screen.getByTestId('wish-count')).toHaveTextContent(/^3$/)

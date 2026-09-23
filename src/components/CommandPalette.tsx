@@ -1,15 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Project } from '../data/types'
-import { categoryMeta } from '../data/categories'
-import { matchesQuery, rankProjects } from '../data/queries'
-import { formatCompact } from '../lib/format'
+import { filterPaletteItems, PALETTE_KIND_LABEL, type PaletteItem, type PaletteKind } from '../lib/paletteItems'
 import { Highlighted } from './Highlighted'
 
 interface CommandPaletteProps {
   open: boolean
-  projects: Project[]
+  /** 全站可跳转条目：页面 + 展品 + 愿望 + 帖子。 */
+  items: PaletteItem[]
   onClose: () => void
-  onSelect: (slug: string) => void
+  onSelect: (id: string) => void
 }
 
 const HINTS = [
@@ -20,18 +18,17 @@ const HINTS = [
 
 const FOCUSABLE = 'input:not([disabled]), button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
 
-export function CommandPalette({ open, projects, onClose, onSelect }: CommandPaletteProps) {
+const GROUP_ORDER: PaletteKind[] = ['page', 'project', 'wish', 'post']
+
+export function CommandPalette({ open, items, onClose, onSelect }: CommandPaletteProps) {
   const [query, setQuery] = useState('')
   const [cursor, setCursor] = useState(0)
   const panelRef = useRef<HTMLDivElement>(null)
-  const listRef = useRef<HTMLUListElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const restoreRef = useRef<HTMLElement | null>(null)
 
-  const results = useMemo(
-    () => rankProjects(projects.filter((project) => matchesQuery(project, query)), query),
-    [projects, query],
-  )
+  const results = useMemo(() => filterPaletteItems(items, query), [items, query])
 
   useEffect(() => {
     setCursor(0)
@@ -71,9 +68,9 @@ export function CommandPalette({ open, projects, onClose, onSelect }: CommandPal
     node?.scrollIntoView({ block: 'nearest' })
   }, [cursor, results])
 
-  const commit = (slug: string | undefined) => {
-    if (!slug) return
-    onSelect(slug)
+  const commit = (id: string | undefined) => {
+    if (!id) return
+    onSelect(id)
     onClose()
   }
 
@@ -112,11 +109,44 @@ export function CommandPalette({ open, projects, onClose, onSelect }: CommandPal
     }
     if (event.key === 'Enter') {
       event.preventDefault()
-      commit(results[cursor]?.slug)
+      commit(results[cursor]?.id)
     }
   }
 
   if (!open) return null
+
+  const grouped = query.trim() === ''
+  let index = -1
+
+  const renderItem = (item: PaletteItem) => {
+    index += 1
+    const active = index === cursor
+    const position = index
+    return (
+      <button
+        key={item.id}
+        type="button"
+        role="option"
+        aria-selected={active}
+        data-active={active}
+        data-item={item.id}
+        className={`palette__item ${active ? 'palette__item--active' : ''}`}
+        onMouseEnter={() => setCursor(position)}
+        onClick={() => commit(item.id)}
+      >
+        <span className="palette__glyph" style={{ ['--hue-a' as string]: item.hue, ['--hue-b' as string]: (item.hue + 48) % 360 }} aria-hidden="true">
+          {item.kind === 'page' ? '⇥' : item.kind === 'wish' ? '✎' : item.kind === 'post' ? '💬' : '◆'}
+        </span>
+        <span className="palette__text">
+          <strong>
+            <Highlighted text={item.label} query={query} />
+          </strong>
+          <em>{item.sub}</em>
+        </span>
+        <span className="palette__meta">{item.badge}</span>
+      </button>
+    )
+  }
 
   return (
     <div className="palette" role="dialog" aria-modal="true" aria-label="快速跳转" onKeyDown={onKeyDown}>
@@ -127,52 +157,34 @@ export function CommandPalette({ open, projects, onClose, onSelect }: CommandPal
           <input
             ref={inputRef}
             value={query}
-            aria-label="搜索作品、作者或技术栈"
-            placeholder="输入作品名、作者或技术栈…"
+            aria-label="搜索页面、作品、愿望或帖子"
+            placeholder="搜索页面、作品、愿望、帖子…"
             onChange={(event) => setQuery(event.target.value)}
           />
           <span className="palette__count">{results.length}</span>
         </div>
 
-        <ul className="palette__list" role="listbox" aria-label="搜索结果" ref={listRef}>
-          {results.map((project, index) => {
-            const meta = categoryMeta(project.category)
-            const active = index === cursor
-            return (
-              <li key={project.id}>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={active}
-                  data-active={active}
-                  className={`palette__item ${active ? 'palette__item--active' : ''}`}
-                  onMouseEnter={() => setCursor(index)}
-                  onClick={() => commit(project.slug)}
-                >
-                  <span
-                    className="palette__glyph"
-                    style={{ ['--hue-a' as string]: meta.hue[0], ['--hue-b' as string]: meta.hue[1] }}
-                    aria-hidden="true"
-                  >
-                    {meta.glyph}
-                  </span>
-                  <span className="palette__text">
-                    <strong>
-                      <Highlighted text={project.title} query={query} />
-                    </strong>
-                    <em>
-                      {project.maker.name} · {project.stack.slice(0, 3).join(' / ')}
-                    </em>
-                  </span>
-                  <span className="palette__meta">
-                    {project.provenance.source === 'github' ? `★ ${formatCompact(project.stars ?? 0)}` : meta.label}
-                  </span>
-                </button>
-              </li>
-            )
-          })}
-          {results.length === 0 && <li className="palette__empty">没有找到匹配的作品，换个关键词试试。</li>}
-        </ul>
+        <div className="palette__list" ref={listRef}>
+          {grouped ? (
+            GROUP_ORDER.map((kind) => {
+              const group = results.filter((item) => item.kind === kind)
+              if (group.length === 0) return null
+              return (
+                <section key={kind} className="palette__group" aria-label={`${PALETTE_KIND_LABEL[kind]}结果`}>
+                  <h3 className="palette__group-title">{PALETTE_KIND_LABEL[kind]}</h3>
+                  {group.map(renderItem)}
+                </section>
+              )
+            })
+          ) : (
+            <ul className="palette__flat" role="listbox" aria-label="搜索结果">
+              {results.map((item) => (
+                <li key={item.id}>{renderItem(item)}</li>
+              ))}
+            </ul>
+          )}
+          {results.length === 0 && <p className="palette__empty">没有找到匹配的内容，换个关键词试试。</p>}
+        </div>
 
         <div className="palette__hints">
           {HINTS.map((hint) => (

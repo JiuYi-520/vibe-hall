@@ -9,9 +9,11 @@ interface PostCardProps {
   me: ForumAuthor | null
   onLike: (id: string) => void
   onReply: (id: string, body: string) => string | null
+  /** 从命令面板跳进来时高亮这一条。 */
+  focused?: boolean
 }
 
-export function PostCard({ post, me, onLike, onReply }: PostCardProps) {
+export function PostCard({ post, me, onLike, onReply, focused }: PostCardProps) {
   const [replyOpen, setReplyOpen] = useState(false)
   const [body, setBody] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -29,7 +31,12 @@ export function PostCard({ post, me, onLike, onReply }: PostCardProps) {
   }
 
   return (
-    <li className="post" data-testid={`post-${post.slug}`} style={{ ['--hue-a' as string]: post.author.hue, ['--hue-b' as string]: (post.author.hue + 50) % 360 }}>
+    <li
+      className={`post ${focused ? 'is-focused' : ''}`}
+      id={`post-${post.slug}`}
+      data-testid={`post-${post.slug}`}
+      style={{ ['--hue-a' as string]: post.author.hue, ['--hue-b' as string]: (post.author.hue + 50) % 360 }}
+    >
       <div className="post__head">
         <span className={`chip chip--${meta.tone}`}>{meta.label}</span>
         <span className="post__author">

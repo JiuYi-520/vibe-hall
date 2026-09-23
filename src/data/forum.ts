@@ -156,10 +156,16 @@ export function forumStats(posts: ForumPost[]): { posts: number; replies: number
   return { posts: posts.length, replies, authors: authors.size, today: createdToday }
 }
 
-export function countMyContributions(posts: ForumPost[], handle: string): { posts: number; replies: number } {
-  const key = handle.trim().replace(/^@/, '').toLowerCase()
-  if (!key) return { posts: 0, replies: 0 }
-  const mine = (author: ForumAuthor) => author.handle.trim().replace(/^@/, '').toLowerCase() === key
+/** 只填了昵称（没有账号）的人也要统计得到，所以 handle 与昵称都参与匹配。 */
+export function countMyContributions(posts: ForumPost[], handle: string, nickname?: string): { posts: number; replies: number } {
+  const handleKey = handle.trim().replace(/^@/, '').toLowerCase()
+  const nameKey = (nickname ?? '').trim().toLowerCase()
+  if (!handleKey && !nameKey) return { posts: 0, replies: 0 }
+  const mine = (author: ForumAuthor) => {
+    const authorHandle = author.handle.trim().replace(/^@/, '').toLowerCase()
+    const authorName = author.nickname.trim().toLowerCase()
+    return Boolean((handleKey && authorHandle === handleKey) || (nameKey && authorName === nameKey))
+  }
   return {
     posts: posts.filter((post) => mine(post.author)).length,
     replies: posts.reduce((total, post) => total + post.replies.filter((reply) => mine(reply.author)).length, 0),

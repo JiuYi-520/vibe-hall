@@ -115,6 +115,31 @@ describe('MePage', () => {
     expect(screen.getByText(/已复制|复制失败/)).toBeInTheDocument()
   })
 
+  it('只填昵称没填账号时，也能统计我的愿望与帖子', async () => {
+    const user = userEvent.setup()
+    const { wishes, forum } = renderPage()
+    await user.type(screen.getByLabelText('昵称'), '阿岛')
+    await user.click(screen.getByRole('button', { name: '保存身份' }))
+
+    await act(async () => {
+      wishes.createWish({
+        title: '想要一个晾衣提醒看板',
+        brief: '每天早上看一眼今天能不能晾衣服、几点最合适。',
+        wisherName: '阿岛',
+        wisherHandle: '',
+      })
+      forum.createPost({
+        title: '只有昵称也要能发帖',
+        body: '这条帖子作者只填了昵称，没有账号。',
+        kind: 'share',
+        author: { nickname: '阿岛', handle: '', hue: 268 },
+      })
+    })
+
+    expect(screen.getByTestId('me-wishes')).toHaveTextContent('1')
+    expect(screen.getByTestId('me-posts')).toHaveTextContent('1')
+  })
+
   it('清空本机数据会连身份一起清掉', async () => {
     const user = userEvent.setup()
     renderPage()

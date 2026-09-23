@@ -29,19 +29,15 @@ export function MePage({
   const [toast, copy] = useCopy()
 
   const showForm = !profile || editing
-  const myWishes = profile
-    ? allWishes.filter(
-        (wish) =>
-          wish.provenance.source === 'local' &&
-          wish.wisher.handle.replace(/^@/, '').toLowerCase() === profile.handle.replace(/^@/, '').toLowerCase() &&
-          Boolean(profile.handle),
-      )
-    : []
+  /** 账号或昵称任一匹配即算「我的」——只填昵称的人也要有统计。 */
+  const same = (left?: string, right?: string) =>
+    Boolean(left?.trim()) && Boolean(right?.trim()) && left!.trim().replace(/^@/, '').toLowerCase() === right!.trim().replace(/^@/, '').toLowerCase()
+  const isMine = (handle?: string, name?: string) => same(handle, profile?.handle) || same(name, profile?.nickname)
+
+  const myWishes = profile ? allWishes.filter((wish) => isMine(wish.wisher.handle, wish.wisher.name)) : []
   const claims = profile ? Object.values(wishes.getState().patch.claims) : []
-  const myClaims = profile
-    ? claims.filter((claim) => claim.maker.handle.replace(/^@/, '').toLowerCase() === profile.handle.replace(/^@/, '').toLowerCase())
-    : []
-  const mine = profile ? countMyContributions(forumPosts, profile.handle) : { posts: 0, replies: 0 }
+  const myClaims = profile ? claims.filter((claim) => isMine(claim.maker.handle, claim.maker.name)) : []
+  const mine = profile ? countMyContributions(forumPosts, profile.handle, profile.nickname) : { posts: 0, replies: 0 }
 
   const exportLocal = () => {
     const payload = {

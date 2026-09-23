@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Project } from '../data/types'
 import type { Wish } from '../data/wishTypes'
@@ -15,13 +15,15 @@ interface WishCardProps {
   onDeliver: (id: string, delivery: { projectSlug?: string; note?: string }) => string | null
   /** 本机身份：用来预填接单署名。 */
   me?: LocalProfile | null
+  /** 从命令面板跳进来时高亮这一张卡。 */
+  focused?: boolean
 }
 
 /**
  * 一张愿望卡：贴愿望的人、想要的人数、接单与交付都在这张卡里完成。
  * 接单/交付表单就地展开，避免跳页面丢掉上下文。
  */
-export function WishCard({ wish, projects, onCheer, onClaim, onDeliver, me }: WishCardProps) {
+export function WishCard({ wish, projects, onCheer, onClaim, onDeliver, me, focused }: WishCardProps) {
   const [claimOpen, setClaimOpen] = useState(false)
   const [deliverOpen, setDeliverOpen] = useState(false)
   const [makerName, setMakerName] = useState(me?.nickname ?? '')
@@ -33,6 +35,12 @@ export function WishCard({ wish, projects, onCheer, onClaim, onDeliver, me }: Wi
 
   const meta = categoryMeta(wish.category)
   const status = WISH_STATUS_META[wish.status]
+
+  /** 本机身份可能是后设置的：只补空字段。 */
+  useEffect(() => {
+    setMakerName((current) => current || me?.nickname || '')
+    setMakerHandle((current) => current || me?.handle || '')
+  }, [me?.nickname, me?.handle])
   const isLocal = wish.provenance.source === 'local'
   const deliveredProject = wish.delivered?.projectSlug
     ? projects.find((project) => project.slug === wish.delivered?.projectSlug)
@@ -59,7 +67,12 @@ export function WishCard({ wish, projects, onCheer, onClaim, onDeliver, me }: Wi
   }
 
   return (
-    <li className="wish" data-testid={`wish-card-${wish.slug}`} style={{ ['--hue-a' as string]: meta.hue[0], ['--hue-b' as string]: meta.hue[1] }}>
+    <li
+      className={`wish ${focused ? 'is-focused' : ''}`}
+      id={`wish-${wish.slug}`}
+      data-testid={`wish-card-${wish.slug}`}
+      style={{ ['--hue-a' as string]: meta.hue[0], ['--hue-b' as string]: meta.hue[1] }}
+    >
       <div className="wish__head">
         <span className={`chip chip--${status.tone}`}>{status.label}</span>
         <span className="chip chip--ghost">
