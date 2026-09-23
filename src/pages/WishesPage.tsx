@@ -3,17 +3,20 @@ import { useSearchParams } from 'react-router-dom'
 import type { CategoryId, Project } from '../data/types'
 import type { Wish } from '../data/wishTypes'
 import { filterWishes, sortWishes, validateWishDraft } from '../data/wishes'
+import { summarize } from '../data/credits'
 import { PROJECT_CATEGORIES } from '../data/categories'
 import { loadProjects } from '../data/loadProjects'
 import { useCopy } from '../lib/hooks'
 import { type WishBoard, useWishes, wishBoard as defaultBoard } from '../lib/wishBoard'
 import { type IdentityBoard, identityBoard as defaultIdentity, useIdentity } from '../lib/identityStore'
+import { type CreditBoard, creditBoard as defaultCredits, useCredits } from '../lib/creditBoard'
 import { WishCard } from '../components/WishCard'
 
 interface WishesPageProps {
   board?: WishBoard
   identity?: IdentityBoard
   projects?: Project[]
+  credits?: CreditBoard
 }
 
 const bundle = loadProjects()
@@ -29,9 +32,15 @@ const FAIL_TEXT: Record<string, string> = {
   'not-found': '没有找到这条愿望',
 }
 
-export function WishesPage({ board = defaultBoard, identity = defaultIdentity, projects = bundle.projects }: WishesPageProps) {
+export function WishesPage({
+  board = defaultBoard,
+  identity = defaultIdentity,
+  projects = bundle.projects,
+  credits = defaultCredits,
+}: WishesPageProps) {
   const wishes = useWishes(board)
   const profile = useIdentity(identity)
+  const creditState = useCredits(credits)
   const [params] = useSearchParams()
   /** 从命令面板跳进来时高亮并滚到那一条。 */
   const focus = params.get('focus')
@@ -82,6 +91,7 @@ export function WishesPage({ board = defaultBoard, identity = defaultIdentity, p
       return
     }
     setIssues([])
+    credits.earn('wish', draft.title)
     setDraft({
       title: '',
       brief: '',
@@ -98,6 +108,7 @@ export function WishesPage({ board = defaultBoard, identity = defaultIdentity, p
 
   const claim = (id: string, maker: { name: string; handle: string }, note: string) => {
     const result = board.claim(id, maker, note)
+    if (result.ok) credits.earn('claim', result.wish.title)
     return result.ok ? null : (FAIL_TEXT[result.reason] ?? '接单失败')
   }
 
@@ -105,6 +116,7 @@ export function WishesPage({ board = defaultBoard, identity = defaultIdentity, p
     const wish = wishes.find((item) => item.id === id)
     const actor = wish?.claim?.maker.handle ?? ''
     const result = board.deliver(id, actor, delivery)
+    if (result.ok) credits.earn('deliver', result.wish.title)
     return result.ok ? null : (FAIL_TEXT[result.reason] ?? '交付失败')
   }
 
@@ -245,6 +257,7 @@ export function WishesPage({ board = defaultBoard, identity = defaultIdentity, p
       <p className="wishes__bar" aria-live="polite">
         <strong data-testid="wish-count">{filtered.length}</strong>
         <span>/ {wishes.length} 条愿望 · 单机版，只有本机能看见</span>
+        <span>· 积分 {summarize(creditState.entries).balance}</span>
         <button type="button" className="link-btn" onClick={() => setFormOpen((open) => !open)}>
           贴一个新愿望
         </button>

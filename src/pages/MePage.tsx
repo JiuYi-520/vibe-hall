@@ -6,6 +6,8 @@ import { type IdentityBoard, identityBoard as defaultIdentity, useIdentity } fro
 import { type WishBoard, useWishes, wishBoard as defaultWishBoard } from '../lib/wishBoard'
 import { type ForumBoard, forumBoard as defaultForumBoard, useForumPosts } from '../lib/forumBoard'
 import { type InteractionBoard, interactionBoard as defaultInteractions, useInteractions } from '../lib/interactionBoard'
+import { type CreditBoard, creditBoard as defaultCredits, useCredits } from '../lib/creditBoard'
+import { BADGES, CREDIT_RULES, CREDITS_DISCLAIMER, summarize } from '../data/credits'
 import { useCopy } from '../lib/hooks'
 
 interface MePageProps {
@@ -13,6 +15,7 @@ interface MePageProps {
   wishes?: WishBoard
   forum?: ForumBoard
   interactions?: InteractionBoard
+  credits?: CreditBoard
 }
 
 const HUE_CHOICES = [212, 268, 318, 168, 38, 12, 192, 286]
@@ -22,10 +25,13 @@ export function MePage({
   wishes = defaultWishBoard,
   forum = defaultForumBoard,
   interactions = defaultInteractions,
+  credits = defaultCredits,
 }: MePageProps) {
   const profile = useIdentity(identity)
   const forumPosts = useForumPosts(forum)
   const interactionState = useInteractions(interactions)
+  const creditState = useCredits(credits)
+  const creditSummary = summarize(creditState.entries)
   const allWishes = useWishes(wishes)
   const [draft, setDraft] = useState<LocalProfile>(profile ?? EMPTY_PROFILE)
   const [editing, setEditing] = useState(false)
@@ -51,6 +57,7 @@ export function MePage({
       wishes: JSON.parse(wishes.exportJson()),
       forum: JSON.parse(forum.exportJson()),
       interactions: JSON.parse(interactions.exportJson()),
+      credits: JSON.parse(credits.exportJson()),
     }
     void copy(JSON.stringify(payload, null, 2), '本机数据')
   }
@@ -60,6 +67,7 @@ export function MePage({
     wishes.reset()
     forum.reset()
     interactions.reset()
+    credits.reset()
     setDraft(EMPTY_PROFILE)
     setEditing(false)
     setIssues([])
@@ -194,6 +202,73 @@ export function MePage({
           </div>
         </form>
       )}
+
+      <section className="credits" data-testid="credit-section">
+        <h2>积分</h2>
+        <dl className="credits__stats">
+          <div>
+            <dt>余额</dt>
+            <dd data-testid="credit-balance">{creditSummary.balance}</dd>
+          </div>
+          <div>
+            <dt>今日</dt>
+            <dd>{creditSummary.today >= 0 ? `+${creditSummary.today}` : creditSummary.today}</dd>
+          </div>
+          <div>
+            <dt>累计获得</dt>
+            <dd>{creditSummary.earned}</dd>
+          </div>
+          <div>
+            <dt>累计花费</dt>
+            <dd>{creditSummary.spent}</dd>
+          </div>
+        </dl>
+        <p className="credits__note">{CREDITS_DISCLAIMER}</p>
+        <div className="credits__actions">
+          <button type="button" className="link-btn" onClick={() => copy(credits.exportJson(), '积分流水')}>
+            导出流水
+          </button>
+        </div>
+
+        <h3 className="credits__sub">徽章商店</h3>
+        <ul className="badges">
+          {BADGES.map((badge) => {
+            const owned = creditState.owned.includes(badge.id)
+            const affordable = creditSummary.balance >= badge.cost
+            return (
+              <li key={badge.id} className="badge" data-testid={`badge-${badge.id}`} style={{ ['--hue-a' as string]: badge.hue }}>
+                <strong>{badge.name}</strong>
+                <em>{badge.note}</em>
+                <span className="badge__cost">{badge.cost} 积分</span>
+                {owned ? (
+                  <span className="badges__owned">已拥有</span>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn--ghost"
+                    disabled={!affordable}
+                    onClick={() => credits.purchase(badge.id)}
+                  >
+                    {affordable ? `兑换（${badge.cost}）` : '积分不够'}
+                  </button>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+
+        <h3 className="credits__sub">流水</h3>
+        <ul className="ledger">
+          {[...creditState.entries].reverse().slice(0, 10).map((entry) => (
+            <li key={entry.id} data-testid={`credit-entry-${entry.id}`}>
+              <span>{CREDIT_RULES[entry.reason].label}</span>
+              <em>{entry.note}</em>
+              <strong>{entry.amount >= 0 ? `+${entry.amount}` : entry.amount}</strong>
+              <time dateTime={entry.at}>{entry.at}</time>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <section className="me__data">
         <h2>本机数据</h2>

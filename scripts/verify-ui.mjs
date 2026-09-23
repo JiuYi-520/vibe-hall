@@ -597,6 +597,48 @@ await postLikeToggle.click()
 await page.waitForTimeout(300)
 check('论坛点赞可取消', Number(await postCard.locator('[data-testid^="post-likes-"]').innerText()) === likeBefore)
 
+// ---------- 积分与徽章商店（虚拟积分，不是钱）----------
+await page.goto(`${BASE}/#/me`, { waitUntil: 'networkidle' })
+const creditBalance = Number(await page.getByTestId('credit-balance').innerText())
+check('个人中心显示积分余额', creditBalance >= 120, `${creditBalance}`)
+check(
+  '页面写明积分不是钱',
+  (await page.locator('.credits__note').innerText()).includes('不是钱'),
+  await page.locator('.credits__note').innerText(),
+)
+check('前面发帖/评论赚到的积分已入账', creditBalance > 120, `起步 120 → ${creditBalance}`)
+
+const firstBadge = page.locator('[data-testid^="badge-"]').first()
+const badgeCost = Number((await firstBadge.locator('.badge__cost').innerText()).replace(/\D/g, ''))
+const ledgerBefore = await page.locator('[data-testid^="credit-entry-"]').count()
+await firstBadge.getByRole('button', { name: /兑换/ }).click()
+await page.waitForTimeout(400)
+check(
+  '兑换徽章后余额扣减',
+  Number(await page.getByTestId('credit-balance').innerText()) === creditBalance - badgeCost,
+  `${creditBalance} − ${badgeCost}`,
+)
+check('兑换后标记为已拥有', (await firstBadge.getByText('已拥有').count()) === 1)
+check(
+  '流水多了一条支出',
+  (await page.locator('[data-testid^="credit-entry-"]').count()) === ledgerBefore + 1,
+)
+await page.screenshot({ path: `${OUT}/20-credits.png`, fullPage: false })
+
+await page.reload({ waitUntil: 'networkidle' })
+check('刷新后徽章仍归我', (await page.getByText('已拥有').count()) >= 1)
+check('余额也保持', Number(await page.getByTestId('credit-balance').innerText()) === creditBalance - badgeCost)
+
+await page.addScriptTag({ path: require.resolve('axe-core/axe.min.js') })
+const meScan = await page.evaluate(async () => {
+  const results = await window.axe.run(document, {
+    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] },
+  })
+  return results.violations.map((violation) => ({ id: violation.id, impact: violation.impact, targets: violation.nodes.slice(0, 3).map((node) => node.target.join(' ')) }))
+})
+const meBlocking = meScan.filter((item) => item.impact === 'critical' || item.impact === 'serious')
+check('个人中心 axe-core 无严重问题', meBlocking.length === 0, meBlocking.length ? JSON.stringify(meBlocking) : '0 条严重/致命')
+
 const mobile = await browser.newPage({ viewport: { width: 420, height: 900 }, deviceScaleFactor: 2 })
 await mobile.goto(`${BASE}/#/`, { waitUntil: 'networkidle' })
 check('mobile layout renders cards', (await mobile.locator('.card').count()) > 0)

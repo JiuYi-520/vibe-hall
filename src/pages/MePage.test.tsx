@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -7,11 +7,14 @@ import { createIdentityBoard } from '../lib/identityStore'
 import { createWishBoard } from '../lib/wishBoard'
 import { createForumBoard } from '../lib/forumBoard'
 import { createInteractionBoard } from '../lib/interactionBoard'
+import { createCreditBoard } from '../lib/creditBoard'
+import { BADGES } from '../data/credits'
 import type { Wish } from '../data/wishTypes'
 import type { ForumPost } from '../data/forumTypes'
 
-function memoryStorage() {
+function memoryStorage(initial?: string) {
   const map = new Map<string, string>()
+  if (initial !== undefined) map.set('vibe-hall:credits', initial)
   return {
     getItem: (key: string) => map.get(key) ?? null,
     setItem: (key: string, value: string) => void map.set(key, value),
@@ -51,12 +54,13 @@ function renderPage() {
   const wishes = createWishBoard({ seeds: [seedWish], storage: memoryStorage() })
   const forum = createForumBoard({ seeds: [seedPost], storage: memoryStorage() })
   const interactions = createInteractionBoard({ storage: memoryStorage() })
+  const credits = createCreditBoard({ storage: memoryStorage() })
   render(
     <MemoryRouter>
-      <MePage identity={identity} wishes={wishes} forum={forum} interactions={interactions} />
+      <MePage identity={identity} wishes={wishes} forum={forum} interactions={interactions} credits={credits} />
     </MemoryRouter>,
   )
-  return { identity, wishes, forum, interactions }
+  return { identity, wishes, forum, interactions, credits }
 }
 
 describe('MePage', () => {
@@ -135,6 +139,8 @@ describe('MePage', () => {
     const payload = JSON.parse(writeText.mock.calls[0][0])
     expect(payload.interactions.liked['neon-kanban']).toBe(true)
     expect(payload.interactions.comments).toHaveLength(1)
+    expect(payload.credits.schema).toBe('vibe-hall.credits.v1')
+    expect(payload.credits.balance).toBeGreaterThanOrEqual(120)
   })
 
   it('只填昵称没填账号时，也能统计我的愿望与帖子', async () => {
@@ -170,5 +176,58 @@ describe('MePage', () => {
     await user.click(screen.getByRole('button', { name: /清空本机数据/ }))
     expect(screen.queryByTestId('me-nickname')).not.toBeInTheDocument()
     expect(screen.getByLabelText('昵称')).toHaveValue('')
+  })
+
+  it('显示积分余额，并写明这是虚拟积分不是钱', () => {
+    renderPage()
+    expect(screen.getByTestId('credit-balance')).toHaveTextContent(/^120$/)
+    expect(screen.getByText(/不是钱/)).toBeInTheDocument()
+    expect(screen.getByText(/不能充值、不能提现/)).toBeInTheDocument()
+  })
+
+  it('可以用积分兑换徽章：扣分并标记已拥有', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    const badge = BADGES[0]
+    const card = screen.getByTestId(`badge-${badge.id}`)
+    await user.click(within(card).getByRole('button', { name: /兑换/ }))
+
+    expect(screen.getByTestId('credit-balance')).toHaveTextContent(String(120 - badge.cost))
+    expect(within(screen.getByTestId(`badge-${badge.id}`)).getByText('已拥有')).toBeInTheDocument()
+    expect(screen.getAllByTestId(/^credit-entry-/).length).toBeGreaterThan(1)
+  })
+
+  it('积分不够时兑换按钮禁用并写明原因', () => {
+    const empty = JSON.stringify({ entries: [{ id: 'x', amount: 1, reason: 'welcome', note: '测试用', at: '2026-09-01' }], owned: [] })
+    const identity = createIdentityBoard({ storage: memoryStorage() })
+    const credits = createCreditBoard({ storage: memoryStorage(empty) })
+    render(
+      <MemoryRouter>
+        <MePage identity={identity} credits={credits} />
+      </MemoryRouter>,
+    )
+    const richest = [...BADGES].sort((a, b) => a.cost - b.cost)[0]
+    const card = screen.getByTestId(`badge-${richest.id}`)
+    expect(within(card).getByRole('button', { name: '积分不够' })).toBeDisabled()
+    expect(screen.getByTestId('credit-balance')).toHaveTextContent(/^1$/)
+  })
+
+  it('流水里能看到每一笔收支', () => {
+    renderPage()
+    const entries = screen.getAllByTestId(/^credit-entry-/)
+    expect(entries.length).toBeGreaterThan(0)
+    expect(entries[0]).toHaveTextContent(/\+120|120/)
+  })
+
+  it('可以导出积分流水，载荷里写明是虚拟积分', async () => {
+    const user = userEvent.setup()
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    renderPage()
+    await user.click(screen.getByRole('button', { name: /导出流水/ }))
+    const payload = JSON.parse(writeText.mock.calls[0][0])
+    expect(payload.schema).toBe('vibe-hall.credits.v1')
+    expect(payload.disclaimer).toContain('虚拟')
+    expect(payload.balance).toBe(120)
   })
 })

@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { WishesPage } from './WishesPage'
 import { createWishBoard } from '../lib/wishBoard'
 import { createIdentityBoard } from '../lib/identityStore'
+import { createCreditBoard } from '../lib/creditBoard'
 import type { Wish } from '../data/wishTypes'
 import { seedProjects } from '../data/seed'
 
@@ -70,13 +71,41 @@ function renderPage(board = createWishBoard({ seeds: wishes, storage: memoryStor
 }
 
 describe('WishesPage', () => {
+  it('贴愿望与接单都会记积分', async () => {
+    const user = userEvent.setup()
+    const board = createWishBoard({ seeds: wishes, storage: memoryStorage() })
+    const identity = createIdentityBoard({ storage: memoryStorage() })
+    const credits = createCreditBoard({ storage: memoryStorage() })
+    const before = credits.balance()
+    render(
+      <MemoryRouter>
+        <WishesPage board={board} identity={identity} credits={credits} projects={seedProjects} />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: /贴一个新愿望/ }))
+    const form = screen.getByTestId('wish-form')
+    await user.type(within(form).getByLabelText('愿望标题'), '想要一个记账小工具')
+    await user.type(within(form).getByLabelText('愿望描述'), '每天记一笔，月底看一眼花在哪了。')
+    await user.type(within(form).getByLabelText('署名'), '阿岛')
+    await user.click(within(form).getByRole('button', { name: '贴到愿望墙' }))
+    expect(credits.balance()).toBe(before + 5)
+
+    const card = screen.getByTestId('wish-card-seed-one')
+    await user.click(within(card).getByRole('button', { name: '我来接单' }))
+    await user.type(within(card).getByLabelText('接单人账号'), 'a-dao')
+    await user.click(within(card).getByRole('button', { name: '确认接单' }))
+    expect(credits.balance()).toBe(before + 5 + 8)
+  })
+
   it('设置本机身份后，发愿表单自动带上署名', async () => {
     const user = userEvent.setup()
     const board = createWishBoard({ seeds: wishes, storage: memoryStorage() })
     const identity = createIdentityBoard({ storage: memoryStorage() })
+    const credits = createCreditBoard({ storage: memoryStorage() })
     render(
       <MemoryRouter>
-        <WishesPage board={board} identity={identity} projects={seedProjects} />
+        <WishesPage board={board} identity={identity} credits={credits} projects={seedProjects} />
       </MemoryRouter>,
     )
 

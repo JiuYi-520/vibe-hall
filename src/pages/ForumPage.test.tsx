@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { ForumPage } from './ForumPage'
 import { createForumBoard } from '../lib/forumBoard'
 import { createIdentityBoard } from '../lib/identityStore'
+import { createCreditBoard } from '../lib/creditBoard'
 import type { ForumPost } from '../data/forumTypes'
 
 function memoryStorage() {
@@ -47,16 +48,36 @@ const posts: ForumPost[] = [
 function renderPage({ withIdentity = true } = {}) {
   const forum = createForumBoard({ seeds: posts, storage: memoryStorage() })
   const identity = createIdentityBoard({ storage: memoryStorage() })
+  const credits = createCreditBoard({ storage: memoryStorage() })
   if (withIdentity) identity.save({ nickname: '阿岛', handle: 'a-dao', bio: '', hue: 268 })
   render(
     <MemoryRouter>
-      <ForumPage board={forum} identity={identity} />
+      <ForumPage board={forum} identity={identity} credits={credits} />
     </MemoryRouter>,
   )
-  return { forum, identity }
+  return { forum, identity, credits }
 }
 
 describe('ForumPage', () => {
+  it('发帖与回复都会记积分', async () => {
+    const user = userEvent.setup()
+    const { credits } = renderPage()
+    const before = credits.balance()
+
+    await user.click(screen.getByRole('button', { name: /发新帖/ }))
+    const form = screen.getByTestId('post-form')
+    await user.type(within(form).getByLabelText('标题'), '积分能干什么')
+    await user.type(within(form).getByLabelText('正文'), '看到个人中心有积分和徽章商店，想问问大家怎么用。')
+    await user.click(within(form).getByRole('button', { name: '发布' }))
+    expect(credits.balance()).toBe(before + 10)
+
+    const card = screen.getByTestId('post-p-one')
+    await user.click(within(card).getByRole('button', { name: '回复' }))
+    await user.type(within(card).getByLabelText('回复正文'), '我用来换徽章了')
+    await user.click(within(card).getByRole('button', { name: '发表回复' }))
+    expect(credits.balance()).toBe(before + 10 + 3)
+  })
+
   it('列出帖子、统计与单机说明', () => {
     renderPage()
     expect(screen.getByTestId('forum-count')).toHaveTextContent(/^2$/)

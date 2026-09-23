@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { ProjectPage } from './ProjectPage'
 import { createInteractionBoard } from '../lib/interactionBoard'
 import { createIdentityBoard } from '../lib/identityStore'
+import { createCreditBoard } from '../lib/creditBoard'
 import { seedProjects } from '../data/seed'
 
 function memoryStorage() {
@@ -19,15 +20,19 @@ function memoryStorage() {
 function renderProject({ withIdentity = true, slug = 'neon-kanban' } = {}) {
   const interactions = createInteractionBoard({ storage: memoryStorage() })
   const identity = createIdentityBoard({ storage: memoryStorage() })
+  const credits = createCreditBoard({ storage: memoryStorage() })
   if (withIdentity) identity.save({ nickname: '阿岛', handle: 'a-dao', bio: '', hue: 268 })
   render(
     <MemoryRouter initialEntries={[`/p/${slug}`]}>
       <Routes>
-        <Route path="/p/:slug" element={<ProjectPage projects={seedProjects} interactions={interactions} identity={identity} />} />
+        <Route
+          path="/p/:slug"
+          element={<ProjectPage projects={seedProjects} interactions={interactions} identity={identity} credits={credits} />}
+        />
       </Routes>
     </MemoryRouter>,
   )
-  return { interactions, identity }
+  return { interactions, identity, credits }
 }
 
 describe('ProjectPage 点赞', () => {
@@ -55,6 +60,15 @@ describe('ProjectPage 点赞', () => {
 })
 
 describe('ProjectPage 评论', () => {
+  it('发表评论会记积分', async () => {
+    const user = userEvent.setup()
+    const { credits } = renderProject()
+    const before = credits.balance()
+    await user.type(screen.getByLabelText('评论正文'), '记一笔积分看看。')
+    await user.click(screen.getByRole('button', { name: '发表评论' }))
+    expect(credits.balance()).toBe(before + 5)
+  })
+
   it('列出演示评论，并统计总数', () => {
     renderProject()
     const section = screen.getByTestId('comment-section')

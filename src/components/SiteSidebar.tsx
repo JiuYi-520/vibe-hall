@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useIdentity } from '../lib/identityStore'
+import { useCredits } from '../lib/creditBoard'
+import { summarize } from '../data/credits'
 
 interface SiteSidebarProps {
   open: boolean
@@ -20,6 +22,8 @@ export const SIDEBAR_LINKS: { to: string; label: string; end?: boolean }[] = [
 
 export function SiteSidebar({ open, narrow, onClose }: SiteSidebarProps) {
   const profile = useIdentity()
+  const credits = useCredits()
+  const creditBalance = summarize(credits.entries).balance
 
   // 抽屉打开时：Esc 关闭。收起时整块 inert，里面的链接不会被 Tab 找到。
   useEffect(() => {
@@ -57,7 +61,7 @@ export function SiteSidebar({ open, narrow, onClose }: SiteSidebarProps) {
             </span>
             <span>
               <strong>{profile.nickname}</strong>
-              <em>{profile.handle ? `@${profile.handle}` : '本机身份'}</em>
+              <em>{profile.handle ? `@${profile.handle}` : '本机身份'} · 积分 {creditBalance}</em>
             </span>
           </Link>
         ) : (
@@ -67,7 +71,7 @@ export function SiteSidebar({ open, narrow, onClose }: SiteSidebarProps) {
             </span>
             <span>
               <strong>本机身份</strong>
-              <em>设置后用于署名</em>
+              <em>设置后用于署名 · 积分 {creditBalance}</em>
             </span>
           </Link>
         )}

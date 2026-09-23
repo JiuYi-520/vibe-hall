@@ -8,7 +8,9 @@ import { formatCompact, formatDate, readingTime } from '../lib/format'
 import { useCopy, useScrollProgress } from '../lib/hooks'
 import { type IdentityBoard, identityBoard as defaultIdentity, useIdentity } from '../lib/identityStore'
 import { type InteractionBoard, interactionBoard as defaultInteractions, useInteractions } from '../lib/interactionBoard'
+import { type CreditBoard, creditBoard as defaultCredits, useCredits } from '../lib/creditBoard'
 import { canDeleteComment, listComments } from '../data/interactions'
+import { CREDIT_RULES, summarize } from '../data/credits'
 import { seedComments } from '../data/interactionSeed'
 import { CoverArt } from '../components/CoverArt'
 import { ProjectCard } from '../components/ProjectCard'
@@ -25,6 +27,7 @@ interface ProjectPageProps {
   projects?: Project[]
   interactions?: InteractionBoard
   identity?: IdentityBoard
+  credits?: CreditBoard
 }
 
 const bundle = loadProjects()
@@ -33,6 +36,7 @@ export function ProjectPage({
   projects = bundle.projects,
   interactions = defaultInteractions,
   identity = defaultIdentity,
+  credits = defaultCredits,
 }: ProjectPageProps) {
   const { slug } = useParams()
   const project = projects.find((item) => item.slug === slug)
@@ -41,6 +45,7 @@ export function ProjectPage({
   const related = useMemo(() => (project ? pickRelated(projects, project, 3) : []), [projects, project])
   const profile = useIdentity(identity)
   const interactionState = useInteractions(interactions)
+  const creditState = useCredits(credits)
   const [commentBody, setCommentBody] = useState('')
   const [commentIssues, setCommentIssues] = useState<string[]>([])
 
@@ -60,6 +65,7 @@ export function ProjectPage({
       return
     }
     setCommentIssues([])
+    credits.earn('comment', project.title)
     setCommentBody('')
   }
 
@@ -280,7 +286,8 @@ export function ProjectPage({
               </button>
               <span className="comments__as">
                 以 <strong>{profile.nickname}</strong>
-                {profile.handle && <em>@{profile.handle}</em>} 发表
+                {profile.handle && <em>@{profile.handle}</em>} 发表 · 每条 +{CREDIT_RULES.comment.amount} 积分（当前{' '}
+                {summarize(creditState.entries).balance}）
               </span>
             </div>
             {commentIssues.length > 0 && (

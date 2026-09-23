@@ -3,8 +3,10 @@ import { Link, useSearchParams } from 'react-router-dom'
 import type { ForumAuthor, PostKind } from '../data/forumTypes'
 import { FORUM_SORT_LABEL, POST_KIND_META, POST_KIND_ORDER } from '../data/forum'
 import { countMyContributions, filterPosts, forumStats, sortPosts, validateForumDraft } from '../data/forum'
+import { summarize } from '../data/credits'
 import { type ForumBoard, forumBoard as defaultBoard, useForumPosts } from '../lib/forumBoard'
 import { type IdentityBoard, identityBoard as defaultIdentity, useIdentity } from '../lib/identityStore'
+import { type CreditBoard, creditBoard as defaultCredits, useCredits } from '../lib/creditBoard'
 import { toggleInList } from '../lib/urlState'
 import { useCopy } from '../lib/hooks'
 import { PostCard } from '../components/PostCard'
@@ -12,6 +14,7 @@ import { PostCard } from '../components/PostCard'
 interface ForumPageProps {
   board?: ForumBoard
   identity?: IdentityBoard
+  credits?: CreditBoard
 }
 
 const SORTS = ['newest', 'active', 'likes'] as const
@@ -22,9 +25,10 @@ const FAIL_TEXT: Record<string, string> = {
   'not-found': '没有找到这条帖子',
 }
 
-export function ForumPage({ board = defaultBoard, identity = defaultIdentity }: ForumPageProps) {
+export function ForumPage({ board = defaultBoard, identity = defaultIdentity, credits = defaultCredits }: ForumPageProps) {
   const posts = useForumPosts(board)
   const profile = useIdentity(identity)
+  const creditState = useCredits(credits)
   const [params] = useSearchParams()
   /** 从命令面板跳进来时高亮并滚到那一条。 */
   const focus = params.get('focus')
@@ -69,6 +73,7 @@ export function ForumPage({ board = defaultBoard, identity = defaultIdentity }: 
       return
     }
     setIssues([])
+    credits.earn('post', draft.title)
     setDraft({ title: '', body: '', kind: draft.kind })
     setFormOpen(false)
     setQuery('')
@@ -78,6 +83,7 @@ export function ForumPage({ board = defaultBoard, identity = defaultIdentity }: 
   const reply = (id: string, body: string) => {
     if (!me) return FAIL_TEXT['missing-author']
     const result = board.reply(id, me, body)
+    if (result.ok) credits.earn('reply', result.post.title)
     return result.ok ? null : (FAIL_TEXT[result.reason] ?? '回复失败')
   }
 
@@ -123,7 +129,9 @@ export function ForumPage({ board = defaultBoard, identity = defaultIdentity }: 
           </button>
         )}
         <Link className="btn btn--ghost" to="/me">
-          {me ? `我的主页 · ${mine.posts} 帖 ${mine.replies} 回复` : '设置本机身份'}
+          {me
+            ? `我的主页 · ${mine.posts} 帖 ${mine.replies} 回复 · 积分 ${summarize(creditState.entries).balance}`
+            : '设置本机身份'}
         </Link>
       </div>
 
