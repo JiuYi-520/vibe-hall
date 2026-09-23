@@ -1145,6 +1145,14 @@ pre {
   height: 100%;
 }
 
+.cover--photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  object-position: top center;
+}
+
 .cover--card {
   aspect-ratio: 16 / 9;
   background-image:

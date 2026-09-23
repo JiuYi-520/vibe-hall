@@ -42,6 +42,8 @@ export interface Project {
   id: string
   slug: string
   title: string
+  /** 真实作品封面图（GitHub 记录由仓库名派生，见 data/cover.ts）。 */
+  coverImageUrl?: string
   /** One line hook shown on the card. */
   tagline: string
   /** Longer first-person story: how it was prompted, what broke, what changed. */

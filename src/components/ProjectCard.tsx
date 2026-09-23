@@ -1,11 +1,36 @@
-import { useRef, type PointerEvent } from 'react'
+import { useRef, useState, type PointerEvent } from 'react'
 import { Link } from 'react-router-dom'
 import type { Project } from '../data/types'
 import { categoryMeta, STATUS_META } from '../data/categories'
+import { resolveCoverUrl } from '../data/cover'
 import { formatCompact, formatDate } from '../lib/format'
 import { usePrefersReducedMotion } from '../lib/hooks'
 import { CoverArt } from './CoverArt'
 import { Highlighted } from './Highlighted'
+
+/**
+ * 真实封面优先：GitHub 记录用仓库官方预览图；
+ * 没有图或图加载失败都回落到程序化封面，列表里不会出现空窗。
+ */
+function ProjectCover({ project }: { project: Project }) {
+  const url = resolveCoverUrl(project)
+  const [failed, setFailed] = useState(false)
+
+  if (!url || failed) return <CoverArt project={project} />
+
+  return (
+    <img
+      className="cover cover--card cover--photo"
+      data-testid="project-cover-image"
+      src={url}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(true)}
+    />
+  )
+}
 
 interface ProjectCardProps {
   project: Project
@@ -76,7 +101,7 @@ export function ProjectCard({ project, index, view = 'grid', highlight, commentC
           <span className="card__door" aria-hidden="true">
             {doorNumber}
           </span>
-          <CoverArt project={project} />
+          <ProjectCover project={project} />
           <div className="card__main">
             <div className="card__top">
               <span className="chip chip--ghost">

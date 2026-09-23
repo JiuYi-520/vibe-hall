@@ -12,6 +12,7 @@ import { type CreditBoard, creditBoard as defaultCredits, useCredits } from '../
 import { canDeleteComment, listComments } from '../data/interactions'
 import { CREDIT_RULES, summarize } from '../data/credits'
 import { seedComments } from '../data/interactionSeed'
+import { withDemo } from '../data/demo'
 import { CoverArt } from '../components/CoverArt'
 import { ProjectCard } from '../components/ProjectCard'
 
@@ -50,7 +51,9 @@ export function ProjectPage({
   const [commentIssues, setCommentIssues] = useState<string[]>([])
 
   const liked = Boolean(slug && interactionState.liked[slug])
-  const comments = project ? listComments(seedComments, interactionState.comments, project.slug) : []
+  const comments = project
+    ? listComments(withDemo(seedComments), interactionState.comments, project.slug)
+    : []
   const likes = project ? project.likes + (liked ? 1 : 0) : 0
 
   const submitComment = () => {

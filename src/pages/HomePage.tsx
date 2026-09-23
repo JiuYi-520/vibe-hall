@@ -13,6 +13,7 @@ import { Marquee } from '../components/Marquee'
 import { useInteractions } from '../lib/interactionBoard'
 import { applyLikes } from '../data/interactions'
 import { seedComments } from '../data/interactionSeed'
+import { withDemo } from '../data/demo'
 
 interface HomePageProps {
   projects?: Project[]
@@ -42,7 +43,7 @@ export function HomePage({
   const displayProjects = useMemo(() => applyLikes(projects, interactionState.liked), [projects, interactionState.liked])
   const commentCounts = useMemo(() => {
     const map = new Map<string, number>()
-    for (const comment of [...seedComments, ...interactionState.comments]) {
+    for (const comment of [...withDemo(seedComments), ...interactionState.comments]) {
       map.set(comment.projectSlug, (map.get(comment.projectSlug) ?? 0) + 1)
     }
     return map

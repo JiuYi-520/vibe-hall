@@ -53,7 +53,7 @@ export function CoverArt({ project, variant = 'card' }: CoverArtProps) {
 
   if (variant === 'card') {
     return (
-      <div className="cover cover--card" style={style} aria-hidden="true">
+      <div className="cover cover--card" style={style} aria-hidden="true" data-testid="project-cover-art">
         <span className="cover__glyph">{glyph}</span>
       </div>
     )
@@ -61,7 +61,7 @@ export function CoverArt({ project, variant = 'card' }: CoverArtProps) {
 
   const id = `cover-${project.slug}`
   return (
-    <div className="cover cover--hero" style={style} aria-hidden="true">
+    <div className="cover cover--hero" style={style} aria-hidden="true" data-testid="project-cover-art">
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="cover__svg">
         <defs>
           <linearGradient id={`${id}-base`} x1="0" y1="0" x2="1" y2="1" gradientTransform={`rotate(${art.rotate} 0.5 0.5)`}>

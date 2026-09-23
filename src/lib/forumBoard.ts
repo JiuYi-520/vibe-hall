@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react'
 import type { ForumAuthor, ForumDraft, ForumIssue, ForumPatch, ForumPost, ForumReply } from '../data/forumTypes'
 import { addReply, applyForumPatch, emptyForumPatch, exportForum, makeLocalPost, validateForumDraft } from '../data/forum'
 import { seedPosts } from '../data/forumSeed'
+import { withDemo } from '../data/demo'
 
 const STORAGE_KEY = 'vibe-hall:forum'
 
@@ -128,7 +129,10 @@ export function createForumBoard({
 const browserStorage: ForumStorage | undefined =
   typeof window !== 'undefined' && 'localStorage' in window ? window.localStorage : undefined
 
-export const forumBoard: ForumBoard = createForumBoard({ seeds: seedPosts, storage: browserStorage })
+export const forumBoard: ForumBoard = createForumBoard({
+  seeds: withDemo(seedPosts),
+  storage: browserStorage,
+})
 
 export function useForumPosts(board: ForumBoard = forumBoard): ForumPost[] {
   return useSyncExternalStore(

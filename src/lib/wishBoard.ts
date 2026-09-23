@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react'
 import type { Wish, WishActionResult, WishDelivery, WishDraft, WishIssue, WishPatch } from '../data/wishTypes'
 import { applyPatch, emptyPatch, exportWishes, makeLocalWish, validateWishDraft, claimWish, deliverWish } from '../data/wishes'
 import { seedWishes } from '../data/wishSeed'
+import { withDemo } from '../data/demo'
 
 const STORAGE_KEY = 'vibe-hall:wishes'
 
@@ -135,7 +136,10 @@ const browserStorage: WishStorage | undefined =
   typeof window !== 'undefined' && 'localStorage' in window ? window.localStorage : undefined
 
 /** 全站唯一的愿望板实例（浏览器里落盘到 localStorage）。 */
-export const wishBoard: WishBoard = createWishBoard({ seeds: seedWishes, storage: browserStorage })
+export const wishBoard: WishBoard = createWishBoard({
+  seeds: withDemo(seedWishes),
+  storage: browserStorage,
+})
 
 export function useWishes(board: WishBoard = wishBoard): Wish[] {
   return useSyncExternalStore(
