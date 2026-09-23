@@ -52,6 +52,17 @@ export function AboutPage() {
             </li>
           </ul>
         </section>
+        <section className="about__card">
+          <h2>愿望墙是什么</h2>
+          <p>
+            有人想不出做点什么，有人想做的没人要——愿望墙把这两件事接上：把「我想要一个能…的东西」贴出来，
+            谁觉得值得做就按「我来接单」，做完挂回大厅，这条愿望就变成「已交付」。
+            第一版没有后端，你贴的愿望只存在<strong>本机浏览器</strong>里，可以用「导出 JSON」交给维护者收录。
+          </p>
+          <p>
+            <Link to="/wishes">去愿望墙 →</Link>
+          </p>
+        </section>
       </div>
 
       <div className="about__foot">

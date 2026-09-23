@@ -114,6 +114,9 @@ export function HomePage({
             <Link className="btn btn--ghost" to="/submit">
               提交我的作品
             </Link>
+            <Link className="btn btn--ghost" to="/wishes">
+              去愿望墙看看
+            </Link>
           </div>
           <dl className="hero__stats enter" style={{ ['--i' as string]: 4 }}>
             <div>
@@ -252,9 +255,14 @@ export function HomePage({
               提交时请附上你的提示词或迭代记录——那是这个展馆最想看的部分。
             </p>
           </div>
-          <button type="button" className="btn btn--primary" onClick={() => navigate('/submit')}>
-            去提交
-          </button>
+          <div className="cta-card__actions">
+            <button type="button" className="btn btn--primary" onClick={() => navigate('/submit')}>
+              去提交
+            </button>
+            <button type="button" className="btn btn--ghost" onClick={() => navigate('/wishes')}>
+              我没有作品，但我想许个愿
+            </button>
+          </div>
         </div>
       </section>
     </div>

@@ -257,6 +257,60 @@ check('submit form accepts a complete draft', (await page.locator('.submit__ok')
 await page.screenshot({ path: `${OUT}/09-submit.png`, fullPage: true })
 
 // ---------- reduced motion + narrow viewport ----------
+// ---------- 愿望墙：贴愿望 → 接单 → 交付 → 刷新仍在 ----------
+await page.goto(`${BASE}/#/wishes`, { waitUntil: 'networkidle' })
+const wishTotalBefore = Number(await page.getByTestId('wish-count').innerText())
+check('愿望墙列出愿望', wishTotalBefore > 0, `共 ${wishTotalBefore} 条`)
+await page.screenshot({ path: `${OUT}/11-wish-wall.png`, fullPage: true })
+
+const myWishTitle = '想要一个把晾衣绳天气提醒做成看板的东西'
+await page.getByRole('button', { name: /贴一个新愿望/ }).click()
+const wishForm = page.getByTestId('wish-form')
+await wishForm.getByLabel('愿望标题').fill(myWishTitle)
+await wishForm.getByLabel('愿望描述').fill('每天早上看一眼：今天能不能晾衣服、几点最合适、要不要收。')
+await wishForm.getByLabel('署名').fill('验证机器人')
+await wishForm.getByLabel('账号').fill('verify-bot')
+await wishForm.getByRole('button', { name: '贴到愿望墙' }).click()
+await page.waitForTimeout(400)
+check('贴出的愿望进入列表且计数加一', Number(await page.getByTestId('wish-count').innerText()) === wishTotalBefore + 1)
+const myCard = page.locator('[data-testid^="wish-card-"]').filter({ hasText: myWishTitle }).first()
+check('新愿望排在最前', (await page.locator('[data-testid^="wish-card-"]').first().innerText()).includes('晾衣绳'))
+
+// 接单
+await myCard.getByRole('button', { name: '我来接单' }).click()
+await myCard.getByLabel('接单人名字').fill('验证机器人')
+await myCard.getByLabel('接单人账号').fill('verify-bot')
+await myCard.getByLabel('一句话计划').fill('先做天气接口和晾晒指数')
+await myCard.getByRole('button', { name: '确认接单' }).click()
+await page.waitForTimeout(400)
+check('接单后状态变为已接单', (await myCard.innerText()).includes('已接单'))
+
+// 交付并关联展品
+await myCard.getByRole('button', { name: '标记为已交付' }).click()
+await myCard.getByLabel('关联作品').selectOption('neon-kanban')
+await myCard.getByLabel('交付说明').fill('第一版做完了')
+await myCard.getByRole('button', { name: '确认交付' }).click()
+await page.waitForTimeout(400)
+const deliveredText = await myCard.innerText()
+check('交付后状态变为已交付并挂上作品链接', deliveredText.includes('已交付') && (await myCard.locator('a').count()) > 0)
+await page.screenshot({ path: `${OUT}/12-wish-delivered.png`, fullPage: false })
+
+// 刷新后本机改动仍在（证明真的写进了本机存储）
+await page.reload({ waitUntil: 'networkidle' })
+const afterReload = page.locator('[data-testid^="wish-card-"]').filter({ hasText: myWishTitle }).first()
+check('刷新后本机愿望与接单记录仍在', (await afterReload.count()) === 1 && (await afterReload.innerText()).includes('已交付'))
+
+// 愿望墙同样接受 axe 扫描
+await page.addScriptTag({ path: require.resolve('axe-core/axe.min.js') })
+const wishScan = await page.evaluate(async () => {
+  const results = await window.axe.run(document, {
+    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] },
+  })
+  return results.violations.map((violation) => ({ id: violation.id, impact: violation.impact, targets: violation.nodes.slice(0, 3).map((node) => node.target.join(' ')) }))
+})
+const wishBlocking = wishScan.filter((item) => item.impact === 'critical' || item.impact === 'serious')
+check('愿望墙 axe-core 无严重问题', wishBlocking.length === 0, wishBlocking.length ? JSON.stringify(wishBlocking) : '0 条严重/致命')
+
 const mobile = await browser.newPage({ viewport: { width: 420, height: 900 }, deviceScaleFactor: 2 })
 await mobile.goto(`${BASE}/#/`, { waitUntil: 'networkidle' })
 check('mobile layout renders cards', (await mobile.locator('.card').count()) > 0)

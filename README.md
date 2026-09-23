@@ -2,6 +2,7 @@
 
 一个用来陈列不同创作者的 vibecoding 作品的网站：门牌号、分类、技术栈、一句介绍，
 再加上这个展馆最看重的两样东西 —— 关键提示词 和 迭代轨迹。
+外加一面**愿望墙**：有人贴出「我想要一个能…的东西」，别人按「我来接单」去做，做完挂回大厅变成「已交付」。
 
 ## 快速开始
 
@@ -10,9 +11,9 @@ npm install
 npm run dev            # 开发服务器 http://localhost:5173
 npm run build          # 类型检查 + 生产构建（dist/）
 npm run preview        # 预览构建产物 http://localhost:4173
-npm test               # 50 项单元/组件测试
+npm test               # 82 项单元/组件测试
 npm run fetch:github   # 拉取真实 GitHub 作品到 src/data/github-live.json
-npm run verify:ui      # 用真实浏览器（Edge）跑 33 项运行时检查并截图
+npm run verify:ui      # 用真实浏览器（Edge）跑 40 项运行时检查并截图
 npm run measure        # 采集首屏体积 / DOM / 长任务等指标（可与基线对比）
 ```
 
@@ -51,6 +52,23 @@ GitHub 条目的 story 字段是仓库自述原文（带“仓库自述（原文
 
 ## 交互与可访问性
 
+## 愿望墙与接单（`/#/wishes`）
+
+愿望墙是展馆的「需求侧」：贴的是**想要什么**，不是成品。
+
+| 状态 | 含义 | 能做什么 |
+| --- | --- | --- |
+| 待接单 | 还没有人认领 | 任何人都能「我来接单」或「我也想要」 |
+| 已接单 | 有人认领并留下了一句话计划 | 只有接单人本人能标记为已交付 |
+| 已交付 | 做出来了，并挂上了大厅里的某件展品或外部链接 | 点「看作品」跳到对应展品 |
+
+规则由纯函数实现，测试覆盖完整状态机（`src/data/wishes.ts`）：重复接单、接已交付的、只有名字没账号、
+非接单人交付、交付时既没选作品也没填链接——每一种失败都有明确原因码，界面上给出中文提示。
+
+**诚实边界**：第一版没有后端。你贴的愿望、接单和鼓掌只写入**当前浏览器的 localStorage**
+（键名 `vibe-hall:wishes`），别人看不到，刷新不丢，「导出 JSON」可以交给维护者正式收录；
+界面顶部明确写了这件事，本机条目在卡片上标「本机」，内置条目标「示例」。存储损坏时会回落到空改动而不是白屏。
+
 - `⌘K` / `Ctrl K` 打开快速跳转面板；`/` 聚焦搜索框；`↑ ↓ ↵ Esc` 在面板内导航。
 - 筛选状态写进 URL（`#/?cats=game&sort=stars`），可直接分享或刷新还原。
 - 卡片跟随指针做 3D 倾斜 + 光斑跟随；网格切换/排序走布局动画（FLIP）。
@@ -62,9 +80,12 @@ GitHub 条目的 story 字段是仓库自述原文（带“仓库自述（原文
 ```
 src/
   data/        types / categories / seed / queries / validateProjects / loadProjects
+               wishTypes / wishSeed / wishes（愿望墙状态机与筛选）
   lib/         urlState（URL 状态解析与序列化）/ hooks（主题、快捷键、滚动进度、复制）
+               wishBoard（本机存储 + 叠加表 + useWishes）
   components/  CoverArt（程序化封面）/ ProjectCard / FilterBar / CommandPalette / SiteHeader / Marquee
-  pages/       HomePage / ProjectPage / SubmitPage / AboutPage
+               WishCard（愿望卡：接单与交付就地展开）
+  pages/       HomePage / ProjectPage / SubmitPage / AboutPage / WishesPage
   styles/      tokens.css（设计令牌）/ global.css
 scripts/       fetch-github.mjs（真实数据）/ verify-ui.mjs（运行时验证）/ measure.mjs（性能指标）
 docs/          self-grill.md（设计核对与已知边界）
@@ -74,7 +95,9 @@ screenshots/   运行时验证截图
 ## 第一版已知边界
 
 - 没有后端：提交页只在本地生成符合 schema 的 JSON，需要人工贴进 Issue/PR。
+- 愿望墙同样没有后端：愿望与接单存在本机 localStorage，别人看不到；也没有身份验证，接单人是自证的。
 - 示例数据不是真实作者：`src/data/seed.ts` 的 16 条是演示条目，界面上全部标了「示例」。
+- 愿望种子（`src/data/wishSeed.ts` 的 10 条）也是演示数据，标「示例」。
 - GitHub 快照会过期：`github-live.json` 带 `fetchedAt`，页面显示抓取时间；更新就重跑脚本。
 - GitHub 分类是启发式：`guessCategory()` 按关键词猜测，可能不准；条目出处始终可回溯到仓库。
 - 未做：账号体系、真实上传、点赞写回、i18n、分页。

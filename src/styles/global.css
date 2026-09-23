@@ -1774,6 +1774,323 @@ pre {
 
 /* ---------- toast ---------- */
 
+/* ---------- 愿望墙 ---------- */
+
+.wishes__head {
+  max-width: 74ch;
+}
+
+.wishes__eyebrow {
+  font-size: var(--step--1);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+.wishes__head h1 {
+  margin-top: var(--space-3);
+  font-size: var(--step-4);
+}
+
+.wishes__lead {
+  margin-top: var(--space-4);
+  color: var(--ink-soft);
+}
+
+.wishes__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.wishes__notice {
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--line-strong);
+  background: var(--panel-hi);
+  color: var(--ink-mute);
+  font-size: var(--step--1);
+}
+
+.wishes__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--space-4);
+  margin: var(--space-5) 0 0;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  backdrop-filter: var(--glass);
+}
+
+.wishes__stats dt {
+  font-size: var(--step--2);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+.wishes__stats dd {
+  margin: 0.2rem 0 0;
+  font-size: var(--step-2);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.wishes__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  padding: var(--space-5);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(140deg, hsl(268 88% 62% / 0.1), transparent 60%), var(--panel);
+  backdrop-filter: var(--glass);
+  box-shadow: var(--shadow-lg);
+  animation: enter-up 420ms var(--ease-out) both;
+}
+
+.wishes__form label,
+.wish__form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: var(--step--1);
+  color: var(--ink-mute);
+}
+
+.wishes__form input,
+.wishes__form textarea,
+.wishes__form select,
+.wish__form input,
+.wish__form select {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  padding: 0.6rem 0.75rem;
+  outline: none;
+  transition: border-color var(--dur-1) var(--ease-out), box-shadow var(--dur-2) var(--ease-out);
+}
+
+.wishes__form input:focus,
+.wishes__form textarea:focus,
+.wishes__form select:focus,
+.wish__form input:focus,
+.wish__form select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px hsl(212 92% 62% / 0.14);
+}
+
+.wishes__form textarea {
+  resize: vertical;
+  font-family: inherit;
+}
+
+.wishes__form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
+}
+
+.wishes__form-actions,
+.wish__form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.wishes__issues {
+  margin: 0;
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+  color: var(--warn);
+  font-size: var(--step--1);
+}
+
+.wishes__count {
+  margin: var(--space-5) 0 var(--space-4);
+  color: var(--ink-mute);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.wishes__count strong {
+  font-size: var(--step-2);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.wishes__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: var(--space-5);
+  /* 同排等高：卡片底边对齐，比拼贴式留白更整齐 */
+  align-items: stretch;
+}
+
+.wish {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  height: 100%;
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, var(--panel), color-mix(in srgb, var(--panel-solid) 84%, transparent));
+  backdrop-filter: var(--glass);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+  animation: card-in 460ms var(--ease-out) both;
+}
+
+.wish::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(180deg, hsl(var(--hue-a) 92% 62%), hsl(var(--hue-b) 92% 62%));
+}
+
+.wish__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.wish__title {
+  font-size: var(--step-2);
+}
+
+.wish__brief {
+  color: var(--ink-soft);
+}
+
+.wish__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--accent);
+  font-size: var(--step--1);
+}
+
+.wish__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+  font-size: var(--step--2);
+  color: var(--ink-mute);
+}
+
+.wish__wisher {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.wish__wisher em,
+.wish__claim em {
+  font-style: normal;
+  color: var(--ink-faint);
+}
+
+.wish__wisher time {
+  color: var(--ink-faint);
+}
+
+.wish__cheers {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.wish__cheers strong {
+  font-size: var(--step-0);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.wish__claim,
+.wish__delivered {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--panel-hi);
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+
+.wish__claim p,
+.wish__delivered p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.wish__note {
+  color: var(--ink-mute);
+}
+
+.wish__claim .btn,
+.wish__delivered .btn,
+.wish__take {
+  align-self: flex-start;
+}
+
+.wish__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--line-strong);
+  background: var(--bg-soft);
+}
+
+.wish__form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+
+.wish__error {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+  color: var(--warn);
+  font-size: var(--step--1);
+}
+
+.cta-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+
 /* ---------- 入场动画（替换动画库：纯 CSS，全局 --i 做错峰） ---------- */
 
 .enter {
