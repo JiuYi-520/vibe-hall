@@ -35,7 +35,18 @@ export interface Wish {
   claim?: WishClaim
   delivered?: WishDelivery
   cheers: number
+  /**
+   * 意向悬赏：只是「愿意请喝咖啡」量级的表达。
+   * 展馆不收款、不支付、不托管，也不校验真伪。
+   */
+  bounty?: WishBounty
   provenance: { source: 'seed' | 'local'; note?: string }
+}
+
+export interface WishBounty {
+  amount: number
+  currency: 'CNY' | 'USD'
+  note?: string
 }
 
 export interface WishDraft {
@@ -48,9 +59,18 @@ export interface WishDraft {
   tags?: string
   /** 参考链接（可选）。 */
   url?: string
+  /** 意向悬赏金额，字符串形式来自表单输入；留空表示不标。 */
+  bountyAmount?: string
+  bountyNote?: string
 }
 
-export type WishIssueCode = 'empty-title' | 'long-title' | 'short-brief' | 'missing-wisher' | 'unsafe-link'
+export type WishIssueCode =
+  | 'empty-title'
+  | 'long-title'
+  | 'short-brief'
+  | 'missing-wisher'
+  | 'unsafe-link'
+  | 'bad-bounty'
 
 export interface WishIssue {
   code: WishIssueCode

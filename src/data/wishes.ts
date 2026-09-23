@@ -26,12 +26,24 @@ export type {
   WishPatch,
   WishSortKey,
   WishStatus,
+  WishBounty,
 } from './wishTypes'
 export { WISH_SORT_LABEL, WISH_STATUS_META, WISH_STATUS_ORDER } from './wishTypes'
 
 const MIN_BRIEF = 10
 const MAX_TITLE = 60
+const MAX_BOUNTY = 100_000
 const SAFE_LINK = /^(https?:\/\/|[./#])/i
+
+/** 意向悬赏只接受正整数金额；这里是「请喝咖啡」量级，不是报价单。 */
+export function parseBountyAmount(raw?: string): number | null {
+  const text = (raw ?? '').trim()
+  if (!text) return null
+  if (!/^\d+$/.test(text)) return null
+  const amount = Number(text)
+  if (!Number.isSafeInteger(amount) || amount <= 0 || amount > MAX_BOUNTY) return null
+  return amount
+}
 
 function stamp(now: Date): string {
   return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10)
@@ -92,12 +104,16 @@ export function validateWishDraft(draft: WishDraft): WishIssue[] {
   if (draft.url && draft.url.trim() && !SAFE_LINK.test(draft.url.trim())) {
     issues.push({ code: 'unsafe-link', detail: '参考链接必须是 http(s):// 开头' })
   }
+  if ((draft.bountyAmount ?? '').trim() && parseBountyAmount(draft.bountyAmount) === null) {
+    issues.push({ code: 'bad-bounty', detail: `悬赏只能填 1 - ${MAX_BOUNTY} 的整数金额（不收款，只是意向）` })
+  }
   return issues
 }
 
 export function makeLocalWish(draft: WishDraft, now = new Date(), sequence = 0): Wish {
   const title = draft.title.trim()
   const base = slugify(title) || 'wish'
+  const bountyAmount = parseBountyAmount(draft.bountyAmount)
   return {
     id: `local-${now.getTime().toString(36)}-${sequence}`,
     slug: `${base}-${now.getTime().toString(36).slice(-4)}`,
@@ -112,6 +128,9 @@ export function makeLocalWish(draft: WishDraft, now = new Date(), sequence = 0):
     createdAt: stamp(now),
     status: 'open',
     cheers: 0,
+    ...(bountyAmount
+      ? { bounty: { amount: bountyAmount, currency: 'CNY' as const, ...(draft.bountyNote?.trim() ? { note: draft.bountyNote.trim() } : {}) } }
+      : {}),
     provenance: { source: 'local', note: '你在本机贴的愿望，只保存在这台浏览器里' },
   }
 }
@@ -216,4 +235,11 @@ export function wishCategories(wishes: Wish[]): { id: CategoryId; count: number 
     .sort((a, b) => b.count - a.count || a.id.localeCompare(b.id))
 }
 
-export const WISH_ISSUE_CODES: WishIssueCode[] = ['empty-title', 'long-title', 'short-brief', 'missing-wisher', 'unsafe-link']
+export const WISH_ISSUE_CODES: WishIssueCode[] = [
+  'empty-title',
+  'long-title',
+  'short-brief',
+  'missing-wisher',
+  'unsafe-link',
+  'bad-bounty',
+]

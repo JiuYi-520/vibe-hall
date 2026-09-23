@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Project } from '../data/types'
 import type { Wish } from '../data/wishTypes'
+import type { LocalProfile } from '../data/identity'
 import { WISH_STATUS_META } from '../data/wishes'
 import { categoryMeta } from '../data/categories'
 import { formatDate } from '../lib/format'
@@ -12,17 +13,19 @@ interface WishCardProps {
   onCheer: (id: string) => void
   onClaim: (id: string, maker: { name: string; handle: string }, note: string) => string | null
   onDeliver: (id: string, delivery: { projectSlug?: string; note?: string }) => string | null
+  /** 本机身份：用来预填接单署名。 */
+  me?: LocalProfile | null
 }
 
 /**
  * 一张愿望卡：贴愿望的人、想要的人数、接单与交付都在这张卡里完成。
  * 接单/交付表单就地展开，避免跳页面丢掉上下文。
  */
-export function WishCard({ wish, projects, onCheer, onClaim, onDeliver }: WishCardProps) {
+export function WishCard({ wish, projects, onCheer, onClaim, onDeliver, me }: WishCardProps) {
   const [claimOpen, setClaimOpen] = useState(false)
   const [deliverOpen, setDeliverOpen] = useState(false)
-  const [makerName, setMakerName] = useState('')
-  const [makerHandle, setMakerHandle] = useState('')
+  const [makerName, setMakerName] = useState(me?.nickname ?? '')
+  const [makerHandle, setMakerHandle] = useState(me?.handle ?? '')
   const [plan, setPlan] = useState('')
   const [projectSlug, setProjectSlug] = useState(projects[0]?.slug ?? '')
   const [deliverNote, setDeliverNote] = useState('')
@@ -63,6 +66,12 @@ export function WishCard({ wish, projects, onCheer, onClaim, onDeliver }: WishCa
           {meta.glyph} {meta.label}
         </span>
         <span className={`chip chip--${isLocal ? 'live' : 'seed'}`}>{isLocal ? '本机' : '示例'}</span>
+        {wish.bounty && (
+          <span className="chip chip--bounty" title="意向悬赏：展馆不收款、不支付、不托管">
+            意向悬赏 ¥{wish.bounty.amount}
+            {wish.bounty.note ? ` · ${wish.bounty.note}` : ''}
+          </span>
+        )}
       </div>
 
       <h3 className="wish__title">{wish.title}</h3>

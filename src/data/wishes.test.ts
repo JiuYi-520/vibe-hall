@@ -8,6 +8,7 @@ import {
   emptyPatch,
   exportWishes,
   filterWishes,
+  makeLocalWish,
   sortWishes,
   validateWishDraft,
   wishStats,
@@ -185,5 +186,40 @@ describe('exportWishes', () => {
     expect(json.exportedAt).toBe('2026-09-22T00:00:00.000Z')
     expect(json.count).toBe(1)
     expect(json.wishes[0].title).toContain('想要一个')
+  })
+})
+
+describe('意向悬赏（不涉及真实资金）', () => {
+  it('金额必须是正整数，否则报错', () => {
+    const base = {
+      title: '想要一个晾衣提醒看板',
+      brief: '每天早上看一眼今天能不能晾衣服、几点最合适。',
+      wisherName: '小满',
+      wisherHandle: 'xiaoman',
+    }
+    expect(validateWishDraft({ ...base, bountyAmount: 'abc' }).map((issue) => issue.code)).toContain('bad-bounty')
+    expect(validateWishDraft({ ...base, bountyAmount: '-5' }).map((issue) => issue.code)).toContain('bad-bounty')
+    expect(validateWishDraft({ ...base, bountyAmount: '0' }).map((issue) => issue.code)).toContain('bad-bounty')
+    expect(validateWishDraft({ ...base, bountyAmount: '300' })).toEqual([])
+  })
+
+  it('填写后愿望带上悬赏字段，留空则没有悬赏', () => {
+    const withBounty = makeLocalWish({
+      title: '想要一个晾衣提醒看板',
+      brief: '每天早上看一眼今天能不能晾衣服、几点最合适。',
+      wisherName: '小满',
+      wisherHandle: 'xiaoman',
+      bountyAmount: '300',
+      bountyNote: '做好了请喝咖啡',
+    })
+    expect(withBounty.bounty).toEqual({ amount: 300, currency: 'CNY', note: '做好了请喝咖啡' })
+
+    const withoutBounty = makeLocalWish({
+      title: '想要一个晾衣提醒看板',
+      brief: '每天早上看一眼今天能不能晾衣服、几点最合适。',
+      wisherName: '小满',
+      wisherHandle: 'xiaoman',
+    })
+    expect(withoutBounty.bounty).toBeUndefined()
   })
 })

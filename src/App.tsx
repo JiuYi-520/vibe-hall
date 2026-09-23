@@ -13,6 +13,8 @@ const SubmitPage = lazy(() => import('./pages/SubmitPage').then((module) => ({ d
 const AboutPage = lazy(() => import('./pages/AboutPage').then((module) => ({ default: module.AboutPage })))
 const WishesPage = lazy(() => import('./pages/WishesPage').then((module) => ({ default: module.WishesPage })))
 const StarsPage = lazy(() => import('./pages/StarsPage').then((module) => ({ default: module.StarsPage })))
+const ForumPage = lazy(() => import('./pages/ForumPage').then((module) => ({ default: module.ForumPage })))
+const MePage = lazy(() => import('./pages/MePage').then((module) => ({ default: module.MePage })))
 
 function RouteFallback() {
   return (
@@ -107,6 +109,8 @@ function Shell() {
             <Route path="/submit" element={<SubmitPage />} />
             <Route path="/stars" element={<StarsPage />} />
             <Route path="/wishes" element={<WishesPage />} />
+            <Route path="/forum" element={<ForumPage />} />
+            <Route path="/me" element={<MePage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="*" element={<ProjectPage projects={bundle.projects} />} />
           </Routes>

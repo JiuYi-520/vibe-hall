@@ -259,6 +259,55 @@ await page.screenshot({ path: `${OUT}/09-submit.png`, fullPage: true })
 // ---------- reduced motion + narrow viewport ----------
 // ---------- 愿望墙：贴愿望 → 接单 → 交付 → 刷新仍在 ----------
 // ---------- 升星榜 ----------
+// ---------- 本机身份 → 论坛 → 愿望悬赏 ----------
+await page.goto(`${BASE}/#/me`, { waitUntil: 'networkidle' })
+await page.getByLabel('昵称').fill('验证机器人')
+await page.getByLabel('账号').fill('verify-bot')
+await page.getByLabel('一句话简介').fill('自动验证用')
+await page.getByRole('button', { name: '保存身份' }).click()
+await page.waitForTimeout(300)
+check('本机身份可以保存并显示', (await page.getByTestId('me-nickname').innerText()) === '验证机器人')
+const meChip = await page.locator('.me-chip').innerText()
+check('顶栏显示本机身份', meChip.includes('验证机器人'), meChip)
+await page.screenshot({ path: `${OUT}/15-me.png`, fullPage: false })
+
+await page.goto(`${BASE}/#/forum`, { waitUntil: 'networkidle' })
+const forumBefore = Number(await page.getByTestId('forum-count').innerText())
+await page.getByRole('button', { name: /发新帖/ }).click()
+const postForm = page.getByTestId('post-form')
+await postForm.getByLabel('标题').fill('验证：本机身份发帖能留在帖子里吗')
+await postForm.getByLabel('正文').fill('这是自动化验证写的一条帖子，用来确认发帖、回复和点赞都会落到本机存储。')
+await postForm.getByLabel('分类').selectOption('share')
+await postForm.getByRole('button', { name: '发布' }).click()
+await page.waitForTimeout(400)
+check('用本机身份发帖并置顶', Number(await page.getByTestId('forum-count').innerText()) === forumBefore + 1)
+const myPost = page.locator('[data-testid^="post-"]').first()
+check('新帖子带本机作者名', (await myPost.innerText()).includes('验证机器人'))
+
+await myPost.getByRole('button', { name: '回复' }).click()
+await myPost.getByLabel('回复正文').fill('自己回复一条，验证回复也会落盘。')
+await myPost.getByRole('button', { name: '发表回复' }).click()
+await page.waitForTimeout(300)
+check('可以回复帖子', (await myPost.innerText()).includes('自己回复一条'))
+await myPost.getByRole('button', { name: /点赞/ }).click()
+await page.waitForTimeout(300)
+check('可以点赞帖子', (await myPost.locator('[data-testid^="post-likes-"]').innerText()) === '1')
+await page.screenshot({ path: `${OUT}/14-forum.png`, fullPage: false })
+
+await page.reload({ waitUntil: 'networkidle' })
+const afterReloadPost = page.locator('[data-testid^="post-"]').filter({ hasText: '验证：本机身份发帖能留在帖子里吗' }).first()
+check('刷新后本机帖子与回复仍在', (await afterReloadPost.count()) === 1 && (await afterReloadPost.innerText()).includes('自己回复一条'))
+
+await page.addScriptTag({ path: require.resolve('axe-core/axe.min.js') })
+const forumScan = await page.evaluate(async () => {
+  const results = await window.axe.run(document, {
+    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] },
+  })
+  return results.violations.map((violation) => ({ id: violation.id, impact: violation.impact, targets: violation.nodes.slice(0, 3).map((node) => node.target.join(' ')) }))
+})
+const forumBlocking = forumScan.filter((item) => item.impact === 'critical' || item.impact === 'serious')
+check('论坛 axe-core 无严重问题', forumBlocking.length === 0, forumBlocking.length ? JSON.stringify(forumBlocking) : '0 条严重/致命')
+
 await page.goto(`${BASE}/#/`, { waitUntil: 'networkidle' })
 await page.getByRole('link', { name: '升星榜' }).click()
 await page.waitForTimeout(600)
@@ -310,13 +359,19 @@ await page.getByRole('button', { name: /贴一个新愿望/ }).click()
 const wishForm = page.getByTestId('wish-form')
 await wishForm.getByLabel('愿望标题').fill(myWishTitle)
 await wishForm.getByLabel('愿望描述').fill('每天早上看一眼：今天能不能晾衣服、几点最合适、要不要收。')
-await wishForm.getByLabel('署名').fill('验证机器人')
-await wishForm.getByLabel('账号').fill('verify-bot')
+await wishForm.getByLabel('意向悬赏（元，可留空）').fill('300')
+await wishForm.getByLabel('悬赏说明（可选）').fill('做好了请喝咖啡')
 await wishForm.getByRole('button', { name: '贴到愿望墙' }).click()
 await page.waitForTimeout(400)
 check('贴出的愿望进入列表且计数加一', Number(await page.getByTestId('wish-count').innerText()) === wishTotalBefore + 1)
 const myCard = page.locator('[data-testid^="wish-card-"]').filter({ hasText: myWishTitle }).first()
 check('新愿望排在最前', (await page.locator('[data-testid^="wish-card-"]').first().innerText()).includes('晾衣绳'))
+const wishText = await myCard.innerText()
+check(
+  '愿望带上意向悬赏并声明不收款',
+  wishText.includes('意向悬赏 ¥300') && wishText.includes('验证机器人'),
+  wishText.split('\n').find((line) => line.includes('意向悬赏')) ?? '未找到悬赏标记',
+)
 
 // 接单
 await myCard.getByRole('button', { name: '我来接单' }).click()

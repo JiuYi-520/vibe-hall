@@ -9,10 +9,12 @@ import { loadProjects } from '../data/loadProjects'
 import { toggleInList } from '../lib/urlState'
 import { useCopy } from '../lib/hooks'
 import { type WishBoard, useWishes, wishBoard as defaultBoard } from '../lib/wishBoard'
+import { type IdentityBoard, identityBoard as defaultIdentity, useIdentity } from '../lib/identityStore'
 import { WishCard } from '../components/WishCard'
 
 interface WishesPageProps {
   board?: WishBoard
+  identity?: IdentityBoard
   projects?: Project[]
 }
 
@@ -30,21 +32,24 @@ const FAIL_TEXT: Record<string, string> = {
   'not-found': '没有找到这条愿望',
 }
 
-export function WishesPage({ board = defaultBoard, projects = bundle.projects }: WishesPageProps) {
+export function WishesPage({ board = defaultBoard, identity = defaultIdentity, projects = bundle.projects }: WishesPageProps) {
   const wishes = useWishes(board)
+  const profile = useIdentity(identity)
   const [query, setQuery] = useState('')
   const [statuses, setStatuses] = useState<WishStatus[]>([])
   const [cats, setCats] = useState<CategoryId[]>([])
   const [sort, setSort] = useState<WishSortKey>('open-first')
   const [formOpen, setFormOpen] = useState(false)
-  const [draft, setDraft] = useState({
+  const [draft, setDraft] = useState(() => ({
     title: '',
     brief: '',
-    wisherName: '',
-    wisherHandle: '',
+    wisherName: profile?.nickname ?? '',
+    wisherHandle: profile?.handle ?? '',
     category: 'life' as CategoryId,
     tags: '',
-  })
+    bountyAmount: '',
+    bountyNote: '',
+  }))
   const [issues, setIssues] = useState<string[]>([])
   const [toast, copy] = useCopy()
 
@@ -68,7 +73,16 @@ export function WishesPage({ board = defaultBoard, projects = bundle.projects }:
       return
     }
     setIssues([])
-    setDraft({ title: '', brief: '', wisherName: '', wisherHandle: '', category: draft.category, tags: '' })
+    setDraft({
+      title: '',
+      brief: '',
+      wisherName: profile?.nickname ?? '',
+      wisherHandle: profile?.handle ?? '',
+      category: draft.category,
+      tags: '',
+      bountyAmount: '',
+      bountyNote: '',
+    })
     setFormOpen(false)
     setQuery('')
     setStatuses([])
@@ -186,7 +200,23 @@ export function WishesPage({ board = defaultBoard, projects = bundle.projects }:
               <span>标签</span>
               <input value={draft.tags} onChange={(event) => setDraft({ ...draft, tags: event.target.value })} placeholder="逗号分隔" />
             </label>
+            <label>
+              <span>意向悬赏（元，可留空）</span>
+              <input
+                value={draft.bountyAmount}
+                inputMode="numeric"
+                onChange={(event) => setDraft({ ...draft, bountyAmount: event.target.value })}
+                placeholder="例如 300"
+              />
+            </label>
+            <label>
+              <span>悬赏说明（可选）</span>
+              <input value={draft.bountyNote} onChange={(event) => setDraft({ ...draft, bountyNote: event.target.value })} placeholder="做好了请喝咖啡" />
+            </label>
           </div>
+          <p className="wishes__money">
+            悬赏只是<strong>意向表示</strong>：展馆不收款、不支付、不托管，也不参与任何结算。
+          </p>
           {issues.length > 0 && (
             <ul className="wishes__issues" role="alert">
               {issues.map((issue) => (
@@ -283,6 +313,7 @@ export function WishesPage({ board = defaultBoard, projects = bundle.projects }:
               onCheer={(id) => board.cheer(id)}
               onClaim={claim}
               onDeliver={deliver}
+              me={profile}
             />
           ))}
         </ul>

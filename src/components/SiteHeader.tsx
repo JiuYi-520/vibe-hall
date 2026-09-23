@@ -1,5 +1,6 @@
 import { NavLink, Link } from 'react-router-dom'
 import { usePalette } from '../lib/paletteContext'
+import { useIdentity } from '../lib/identityStore'
 import type { ThemeName } from '../lib/hooks'
 
 interface SiteHeaderProps {
@@ -10,6 +11,7 @@ interface SiteHeaderProps {
 
 export function SiteHeader({ theme, onToggleTheme, count }: SiteHeaderProps) {
   const palette = usePalette()
+  const profile = useIdentity()
 
   return (
     <header className="site-header">
@@ -29,11 +31,18 @@ export function SiteHeader({ theme, onToggleTheme, count }: SiteHeaderProps) {
         </NavLink>
         <NavLink to="/stars">升星榜</NavLink>
         <NavLink to="/wishes">愿望墙</NavLink>
+        <NavLink to="/forum">论坛</NavLink>
         <NavLink to="/submit">提交作品</NavLink>
         <NavLink to="/about">关于</NavLink>
       </nav>
 
       <div className="site-actions">
+        <Link className="me-chip" to="/me" aria-label={profile ? `我的主页：${profile.nickname}` : '设置本机身份'}>
+          <span className="me-chip__dot" aria-hidden="true" style={{ ['--hue-a' as string]: profile?.hue ?? 212 }}>
+            {(profile?.nickname || '本').slice(0, 1)}
+          </span>
+          <span className="me-chip__text">{profile ? profile.nickname : '本机身份'}</span>
+        </Link>
         <button
           type="button"
           className="cmd-trigger"

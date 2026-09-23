@@ -1778,6 +1778,464 @@ pre {
 
 /* ---------- 升星榜 ---------- */
 
+/* ---------- 本机身份 / 论坛 / 个人主页 ---------- */
+
+.me-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.28rem 0.7rem 0.28rem 0.32rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--panel);
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+  max-width: 180px;
+  transition: border-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
+}
+
+.me-chip:hover {
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.me-chip__dot,
+.me__avatar,
+.post__dot {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(140deg, hsl(var(--hue-a, 212) 90% 62%), hsl(calc(var(--hue-a, 212) + 48) 88% 58%));
+  color: #08080f;
+  font-size: 0.7rem;
+  flex: none;
+}
+
+.me-chip__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip--bounty {
+  color: hsl(38 92% 68%);
+  border-color: hsl(38 92% 60% / 0.45);
+  background: hsl(38 92% 60% / 0.12);
+}
+
+.wishes__money {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--line-strong);
+  background: var(--panel-hi);
+  color: var(--ink-mute);
+  font-size: var(--step--2);
+}
+
+.forum__head h1,
+.me__head h1 {
+  font-size: var(--step-4);
+}
+
+.forum__lead,
+.me__lead {
+  margin-top: var(--space-3);
+  max-width: 72ch;
+  color: var(--ink-soft);
+}
+
+.forum__notice {
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--line-strong);
+  background: var(--panel-hi);
+  color: var(--ink-mute);
+  font-size: var(--step--1);
+}
+
+.forum__stats,
+.me__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--space-4);
+  margin: var(--space-5) 0 0;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  backdrop-filter: var(--glass);
+}
+
+.forum__stats dt,
+.me__stats dt {
+  font-size: var(--step--2);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+.forum__stats dd,
+.me__stats dd {
+  margin: 0.2rem 0 0;
+  font-size: var(--step-2);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.forum__actions,
+.me__data-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.forum__form,
+.me__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  padding: var(--space-5);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(140deg, hsl(212 92% 62% / 0.1), transparent 60%), var(--panel);
+  backdrop-filter: var(--glass);
+  animation: enter-up 420ms var(--ease-out) both;
+}
+
+.forum__form label,
+.me__form label,
+.post__form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: var(--step--1);
+  color: var(--ink-mute);
+}
+
+.forum__form input,
+.forum__form textarea,
+.forum__form select,
+.me__form input,
+.post__form textarea {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  padding: 0.6rem 0.75rem;
+  outline: none;
+  font-family: inherit;
+  transition: border-color var(--dur-1) var(--ease-out), box-shadow var(--dur-2) var(--ease-out);
+}
+
+.forum__form input:focus,
+.forum__form textarea:focus,
+.forum__form select:focus,
+.me__form input:focus,
+.post__form textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px hsl(212 92% 62% / 0.14);
+}
+
+.forum__form-row,
+.me__form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
+}
+
+.forum__as {
+  margin: 0;
+  color: var(--ink-mute);
+  font-size: var(--step--1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.forum__as em {
+  font-style: normal;
+  color: var(--ink-faint);
+}
+
+.forum__as--warn {
+  color: var(--warn);
+}
+
+.forum__issues,
+.me__issues {
+  margin: 0;
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+  color: var(--warn);
+  font-size: var(--step--1);
+}
+
+.forum__form-actions,
+.me__form-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.forum__count {
+  margin: var(--space-5) 0 var(--space-4);
+  color: var(--ink-mute);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.forum__count strong {
+  font-size: var(--step-2);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.forum__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-5);
+}
+
+.post {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, var(--panel), color-mix(in srgb, var(--panel-solid) 84%, transparent));
+  backdrop-filter: var(--glass);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  animation: card-in 460ms var(--ease-out) both;
+}
+
+.post::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(180deg, hsl(var(--hue-a, 212) 92% 62%), hsl(var(--hue-b, 268) 92% 62%));
+}
+
+.post__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.post__author {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--step--2);
+  color: var(--ink-soft);
+}
+
+.post__author em {
+  font-style: normal;
+  color: var(--ink-faint);
+}
+
+.post__author time {
+  color: var(--ink-faint);
+}
+
+.post__title {
+  font-size: var(--step-2);
+}
+
+.post__body {
+  color: var(--ink-soft);
+  white-space: pre-line;
+}
+
+.post__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+  font-size: var(--step--2);
+  color: var(--ink-mute);
+}
+
+.post__count {
+  font-variant-numeric: tabular-nums;
+}
+
+.post__hint {
+  color: var(--ink-faint);
+}
+
+.post__replies {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.post__replies li {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--panel-hi);
+  border: 1px solid var(--line);
+}
+
+.post__replies p {
+  margin: 0.25rem 0;
+  color: var(--ink-soft);
+  font-size: var(--step--1);
+}
+
+.post__replies time {
+  font-size: var(--step--2);
+  color: var(--ink-faint);
+}
+
+.post__reply-who {
+  font-size: var(--step--2);
+  color: var(--ink-mute);
+}
+
+.post__reply-who em {
+  font-style: normal;
+  color: var(--ink-faint);
+}
+
+.post__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--line-strong);
+  background: var(--bg-soft);
+}
+
+.post__form-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.post__error,
+.wish__error {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+  color: var(--warn);
+  font-size: var(--step--1);
+}
+
+.me__card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  backdrop-filter: var(--glass);
+}
+
+.me__avatar {
+  width: 56px;
+  height: 56px;
+  font-size: 1.3rem;
+}
+
+.me__id {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.me__id strong {
+  font-size: var(--step-2);
+}
+
+.me__id span {
+  color: var(--ink-faint);
+  font-size: var(--step--1);
+}
+
+.me__id p {
+  margin: 0.35rem 0 0;
+  color: var(--ink-soft);
+  font-size: var(--step--1);
+}
+
+.me__card-actions {
+  margin-left: auto;
+}
+
+.me__hues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.me__hues legend {
+  padding: 0;
+  font-size: var(--step--1);
+  color: var(--ink-mute);
+  margin-bottom: 0.4rem;
+}
+
+.me__hue {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  background: linear-gradient(140deg, hsl(var(--hue-a) 90% 62%), hsl(calc(var(--hue-a) + 48) 88% 58%));
+}
+
+.me__hue.is-active {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px var(--panel-hi);
+}
+
+.me__data {
+  margin-top: var(--space-6);
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  backdrop-filter: var(--glass);
+}
+
+.me__data h2 {
+  font-size: var(--step-1);
+}
+
+.me__data p {
+  margin-top: var(--space-2);
+  color: var(--ink-mute);
+  font-size: var(--step--1);
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

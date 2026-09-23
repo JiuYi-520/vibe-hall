@@ -2,8 +2,13 @@
 
 一个用来陈列不同创作者的 vibecoding 作品的网站：门牌号、分类、技术栈、一句介绍，
 再加上这个展馆最看重的两样东西 —— 关键提示词 和 迭代轨迹。
-外加两面：**愿望墙**（贴出「我想要一个能…的东西」→ 别人接单 → 挂回大厅变「已交付」）和
-**GitHub 升星榜**（按真实快照统计增量，分技能包 / 软件应用 / 库与框架 / 清单合集，可按日 / 周 / 月 / 全部看）。
+外加四个入口：**愿望墙**（贴出「我想要一个能…的东西」→ 别人接单 → 挂回大厅变「已交付」）、
+**GitHub 升星榜**（按真实快照统计增量，分技能包 / 软件应用 / 库与框架 / 清单合集，可按日 / 周 / 月 / 全部看）、
+**论坛**（求助 / 经验 / 作品 / 招募 / 闲聊）和**我的主页**（本机身份 + 我的愿望 / 接单 / 帖子 / 回复）。
+
+> 关于「登陆」和「资金」：没有后端与支付资质时，做假的登录框和假的余额比不做更糟。
+> 现在的做法是**本机身份**（不是账号，没有密码与验证）+ **意向悬赏**（只展示金额，不收款不支付），
+> 真实登录与真实资金需要什么写在 [docs/money-and-auth.md](docs/money-and-auth.md)，明确标为未做。
 
 ## 快速开始
 
@@ -12,9 +17,9 @@ npm install
 npm run dev            # 开发服务器 http://localhost:5173
 npm run build          # 类型检查 + 生产构建（dist/）
 npm run preview        # 预览构建产物 http://localhost:4173
-npm test               # 97 项单元/组件测试
+npm test               # 137 项单元/组件测试
 npm run fetch:github   # 拉取真实 GitHub 作品到 src/data/github-live.json
-npm run verify:ui      # 用真实浏览器（Edge）跑 47 项运行时检查并截图
+npm run verify:ui      # 用真实浏览器（Edge）跑 56 项运行时检查并截图
 npm run measure        # 采集首屏体积 / DOM / 长任务等指标（可与基线对比）
 ```
 
@@ -73,6 +78,20 @@ GitHub 条目的 story 字段是仓库自述原文（带“仓库自述（原文
 
 ## 愿望墙与接单（`/#/wishes`）
 
+## 论坛与我的主页（`/#/forum`、`/#/me`）
+
+论坛分类：求助 / 经验 / 作品 / 招募 / 闲聊；支持搜索、排序（最新 / 回复最多 / 最热）、点赞与回复。
+发帖和回复都用**本机身份**署名——没有身份时表单会指向 `/#/me` 让你先设置。
+
+我的主页聚合四项本机统计（我的愿望 / 我接的单 / 我的帖子 / 我的回复），并可一键**导出本机数据 JSON**
+或**清空本机数据**（身份、愿望、接单、帖子一起清）。
+
+**本机身份 = 署名，不是账号**：没有密码、没有验证、没有会话、不上传；谁也证明不了"这个 handle 真是你的"。
+真实登录（GitHub OAuth 等）需要服务端与凭据，未做，见 [docs/money-and-auth.md](docs/money-and-auth.md)。
+
+**意向悬赏 = 展示，不是支付**：愿望可以标「意向悬赏 ¥300 · 做好了请喝咖啡」，
+但展馆不收款、不支付、不托管，也不参与任何结算；真实资金同样标为未做。
+
 愿望墙是展馆的「需求侧」：贴的是**想要什么**，不是成品。
 
 | 状态 | 含义 | 能做什么 |
@@ -101,14 +120,18 @@ src/
   data/        types / categories / seed / queries / validateProjects / loadProjects
                wishTypes / wishSeed / wishes（愿望墙状态机与筛选）
                starTypes / stars（升星榜分类与增量统计）/ history（快照历史加载）
+               identity（本机身份校验）/ forumTypes / forumSeed / forum（论坛状态与筛选）
   lib/         urlState（URL 状态解析与序列化）/ hooks（主题、快捷键、滚动进度、复制）
                wishBoard（本机存储 + 叠加表 + useWishes）
+               identityStore（本机身份存储）/ forumBoard（论坛本机存储）
   components/  CoverArt（程序化封面）/ ProjectCard / FilterBar / CommandPalette / SiteHeader / Marquee
                WishCard（愿望卡：接单与交付就地展开）
+               PostCard（帖子卡：回复与点赞就地展开）
   pages/       HomePage / ProjectPage / SubmitPage / AboutPage / WishesPage / StarsPage
+               ForumPage / MePage
   styles/      tokens.css（设计令牌）/ global.css
 scripts/       fetch-github.mjs（真实数据）/ verify-ui.mjs（运行时验证）/ measure.mjs（性能指标）
-docs/          self-grill.md（设计核对与已知边界）
+docs/          self-grill.md（设计核对与已知边界）/ money-and-auth.md（登录与资金边界）
 screenshots/   运行时验证截图
 ```
 
@@ -116,6 +139,9 @@ screenshots/   运行时验证截图
 
 - 没有后端：提交页只在本地生成符合 schema 的 JSON，需要人工贴进 Issue/PR。
 - 愿望墙同样没有后端：愿望与接单存在本机 localStorage，别人看不到；也没有身份验证，接单人是自证的。
+- 论坛同样是单机版：帖子与回复只在本机，别人看不到；没有审核、没有敏感词过滤，也不做反垃圾。
+- 本机身份不是账号：没有密码/验证/会话，任何人都能填别人的 handle；真实登录需要服务端与凭据，未做。
+- 资金未做：悬赏只是展示，不收款、不支付、不托管；真实资金需要主体、资质与法务，见 docs/money-and-auth.md。
 - 示例数据不是真实作者：`src/data/seed.ts` 的 16 条是演示条目，界面上全部标了「示例」。
 - 愿望种子（`src/data/wishSeed.ts` 的 10 条）也是演示数据，标「示例」。
 - GitHub 快照会过期：`github-live.json` 带 `fetchedAt`，页面显示抓取时间；更新就重跑脚本。
