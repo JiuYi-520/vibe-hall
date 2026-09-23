@@ -10,10 +10,31 @@ npm install
 npm run dev            # 开发服务器 http://localhost:5173
 npm run build          # 类型检查 + 生产构建（dist/）
 npm run preview        # 预览构建产物 http://localhost:4173
-npm test               # 36 项单元/组件测试
+npm test               # 50 项单元/组件测试
 npm run fetch:github   # 拉取真实 GitHub 作品到 src/data/github-live.json
-npm run verify:ui      # 用真实浏览器（Edge）跑 21 项运行时检查并截图
+npm run verify:ui      # 用真实浏览器（Edge）跑 33 项运行时检查并截图
+npm run measure        # 采集首屏体积 / DOM / 长任务等指标（可与基线对比）
 ```
+
+## 性能与预算（优化后实测）
+
+同一台机器、同一套 `scripts/measure.mjs`，生产构建实测：
+
+| 指标 | 优化前 | 优化后 |
+| --- | --- | --- |
+| 首屏 JS | 463,011 字节（1 个文件） | 324,116 字节（react / router / index 三个并行块） |
+| 首屏 JS（gzip） | 150.6 kB | 105.6 kB |
+| DOM 节点 | 2,026 | 1,112 |
+| 封面 SVG 子节点 | 850 | 0（列表封面改为纯 CSS 渐变） |
+| 命令面板响应 | 43 ms | 28 ms |
+
+做法：详情/提交/关于三个页面改成路由级懒加载、vendor 分包、列表封面从内联 SVG 改纯 CSS、
+去掉动画库（倾斜与光斑改为在 DOM 上写 CSS 变量，每帧最多一次）、筛选切换用原生 View Transitions 做交叉淡入。
+
+运行时预算守在 `scripts/verify-ui.mjs` 里：首屏 JS ≤ 340,000 字节、CSS ≤ 40,000 字节、DOM ≤ 1,400 节点，超出即失败。
+
+未声称的部分：首次内容渲染时间没有在优化前的构建上采到，因此**不声称渲染提速**；
+指针扫描期间前后都是 0 次长任务，所以交互改造在本机不产生可测差异（收益是主线程帧内工作量与内存，不是这台机器上的长任务数）。
 
 ## 数据来源（重要）
 
@@ -45,7 +66,7 @@ src/
   components/  CoverArt（程序化封面）/ ProjectCard / FilterBar / CommandPalette / SiteHeader / Marquee
   pages/       HomePage / ProjectPage / SubmitPage / AboutPage
   styles/      tokens.css（设计令牌）/ global.css
-scripts/       fetch-github.mjs（真实数据）/ verify-ui.mjs（运行时验证）
+scripts/       fetch-github.mjs（真实数据）/ verify-ui.mjs（运行时验证）/ measure.mjs（性能指标）
 docs/          self-grill.md（设计核对与已知边界）
 screenshots/   运行时验证截图
 ```

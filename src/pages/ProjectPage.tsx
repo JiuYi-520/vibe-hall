@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import type { Project } from '../data/types'
 import { loadProjects } from '../data/loadProjects'
 import { categoryMeta, STATUS_META } from '../data/categories'
@@ -67,20 +66,10 @@ export function ProjectPage({ projects = bundle.projects }: ProjectPageProps) {
       </nav>
 
       <header className="detail__head">
-        <motion.div
-          className="detail__visual"
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-        >
+        <div className="detail__visual enter" style={{ ['--i' as string]: 0 }}>
           <CoverArt project={project} variant="hero" />
-        </motion.div>
-        <motion.div
-          className="detail__intro"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.06 }}
-        >
+        </div>
+        <div className="detail__intro enter" style={{ ['--i' as string]: 1 }}>
           <div className="detail__chips">
             <span className="chip chip--ghost">
               {meta.glyph} {meta.label}
@@ -143,7 +132,7 @@ export function ProjectPage({ projects = bundle.projects }: ProjectPageProps) {
               <dd>{readingTime(`${project.story} ${project.prompt ?? ''}`)} 分钟</dd>
             </div>
           </dl>
-        </motion.div>
+        </div>
       </header>
 
       <div className="detail__grid">

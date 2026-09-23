@@ -1,16 +1,16 @@
 import { useMemo, useRef } from 'react'
+import { flushSync } from 'react-dom'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import type { Filters, Project } from '../data/types'
-import { buildFacets, computeStats, filterProjects, sortProjects } from '../data/queries'
+import { buildFacets, computeStats, filterProjects, pickFeatured, rankProjects, sortProjects } from '../data/queries'
 import { loadProjects } from '../data/loadProjects'
-import { activeFilterCount, parseGalleryState, serializeGalleryState, type GalleryState } from '../lib/urlState'
+import { activeFilterCount, parseGalleryState, serializeGalleryState, SORT_KEYS, type GalleryState } from '../lib/urlState'
 import { usePalette } from '../lib/paletteContext'
+import { usePrefersReducedMotion } from '../lib/hooks'
 import { formatCompact } from '../lib/format'
 import { FilterBar, SORT_LABEL } from '../components/FilterBar'
 import { ProjectCard } from '../components/ProjectCard'
 import { Marquee } from '../components/Marquee'
-import { SORT_KEYS } from '../lib/urlState'
 
 interface HomePageProps {
   projects?: Project[]
@@ -20,11 +20,16 @@ interface HomePageProps {
 
 const bundle = loadProjects()
 
-export function HomePage({ projects = bundle.projects, liveCount = bundle.liveCount, fetchedAt = bundle.fetchedAt ?? null }: HomePageProps) {
+export function HomePage({
+  projects = bundle.projects,
+  liveCount = bundle.liveCount,
+  fetchedAt = bundle.fetchedAt ?? null,
+}: HomePageProps) {
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const palette = usePalette()
   const searchRef = useRef<HTMLInputElement>(null)
+  const reduced = usePrefersReducedMotion()
 
   const state = useMemo(() => parseGalleryState(params.toString()), [params])
   const filtered = useMemo(
@@ -38,17 +43,27 @@ export function HomePage({ projects = bundle.projects, liveCount = bundle.liveCo
       }),
     [projects, state],
   )
-  const sorted = useMemo(() => sortProjects(filtered, state.sort), [filtered, state.sort])
+  // 搜索态先按相关性排序，其余情况按用户选的排序方式。
+  const ordered = useMemo(
+    () => (state.q ? rankProjects(filtered, state.q, state.sort) : sortProjects(filtered, state.sort)),
+    [filtered, state.q, state.sort],
+  )
   const facets = useMemo(() => buildFacets(projects), [projects])
   const stats = useMemo(() => computeStats(projects), [projects])
-  const featured = useMemo(() => sorted.filter((project) => project.featured), [sorted])
+  const featured = useMemo(() => pickFeatured(ordered.filter((project) => project.featured), 4), [ordered])
   const activeCount = activeFilterCount(state)
 
-  const applyState = (next: GalleryState) => setParams(new URLSearchParams(serializeGalleryState(next)), { replace: true })
+  /** 用原生 View Transitions 做筛选变化的 FLIP 过渡；不支持时直接更新。 */
+  const applyState = (next: GalleryState) => {
+    const commit = () => setParams(new URLSearchParams(serializeGalleryState(next)), { replace: true })
+    const doc = document as Document & { startViewTransition?: (callback: () => void) => void }
+    if (doc.startViewTransition && !reduced) doc.startViewTransition(() => flushSync(commit))
+    else commit()
+  }
 
   const update = (patch: Partial<GalleryState>) => applyState({ ...state, ...patch })
 
-  /** FilterBar speaks the domain Filters vocabulary; translate it into url state keys. */
+  /** FilterBar 用的是领域层的 Filters 字段名，这里翻译成 URL 状态字段。 */
   const applyFilters = (patch: Partial<Filters & { featured: boolean }>) => {
     applyState({
       ...state,
@@ -61,9 +76,16 @@ export function HomePage({ projects = bundle.projects, liveCount = bundle.liveCo
   }
 
   const reset = () => {
-    setParams(new URLSearchParams(serializeGalleryState({ ...state, q: '', cats: [], stack: [], statuses: [], featured: false })), {
-      replace: true,
-    })
+    applyState({ ...state, q: '', cats: [], stack: [], statuses: [], featured: false })
+  }
+
+  /**
+   * HashRouter 下 href="#hall" 会被当成路由跳转（变成 /hall 兜底页），
+   * 所以这里拦下默认行为，改成页内平滑滚动。
+   */
+  const scrollToHall = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault()
+    document.getElementById('hall')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
   }
 
   return (
@@ -71,39 +93,19 @@ export function HomePage({ projects = bundle.projects, liveCount = bundle.liveCo
       <section className="hero">
         <div className="hero__aura" aria-hidden="true" />
         <div className="hero__inner">
-          <motion.p
-            className="hero__eyebrow"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
+          <p className="hero__eyebrow enter" style={{ ['--i' as string]: 0 }}>
             一人一扇门 · {stats.makers} 位创作者 · {stats.stacks} 种技术栈
-          </motion.p>
-          <motion.h1
-            className="hero__title"
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.05 }}
-          >
+          </p>
+          <h1 className="hero__title enter" style={{ ['--i' as string]: 1 }}>
             用自然语言盖起来的
             <span className="hero__title-accent">一整条街</span>
-          </motion.h1>
-          <motion.p
-            className="hero__lead"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.12 }}
-          >
+          </h1>
+          <p className="hero__lead enter" style={{ ['--i' as string]: 2 }}>
             这里陈列不同创作者的 vibecoding 作品：它们是游戏、课件、看板、玩具，也是别人某天晚上
             “我就想试试能不能做出来”的结果。点开任意一扇门，能看到那件作品是怎么被说出来的。
-          </motion.p>
-          <motion.div
-            className="hero__cta"
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.18 }}
-          >
-            <a className="btn btn--primary" href="#hall">
+          </p>
+          <div className="hero__cta enter" style={{ ['--i' as string]: 3 }}>
+            <a className="btn btn--primary" href="#hall" onClick={scrollToHall}>
               进入展馆 ↓
             </a>
             <button type="button" className="btn btn--ghost" onClick={palette.open}>
@@ -112,8 +114,8 @@ export function HomePage({ projects = bundle.projects, liveCount = bundle.liveCo
             <Link className="btn btn--ghost" to="/submit">
               提交我的作品
             </Link>
-          </motion.div>
-          <dl className="hero__stats">
+          </div>
+          <dl className="hero__stats enter" style={{ ['--i' as string]: 4 }}>
             <div>
               <dt>馆内展品</dt>
               <dd>{stats.projects}</dd>
@@ -139,14 +141,14 @@ export function HomePage({ projects = bundle.projects, liveCount = bundle.liveCo
           )}
           {liveCount > 0 && fetchedAt && (
             <p className="hero__notice hero__notice--ok">
-              已合并 {liveCount} 件真实 GitHub 作品{fetchedAt ? `，抓取于 ${fetchedAt.slice(0, 16).replace('T', ' ')}` : ''}。
+              已合并 {liveCount} 件真实 GitHub 作品，抓取于 {fetchedAt.slice(0, 16).replace('T', ' ')}。
             </p>
           )}
         </div>
         <Marquee projects={sortProjects(filtered, 'newest')} />
       </section>
 
-      <section className="section" id="hall">
+      <section className="section" id="hall" tabIndex={-1}>
         <div className="section__head">
           <h2>
             <span aria-hidden="true">▤</span> 展馆大厅
@@ -166,8 +168,9 @@ export function HomePage({ projects = bundle.projects, liveCount = bundle.liveCo
 
         <div className="toolbar">
           <p className="toolbar__count" aria-live="polite">
-            <strong data-testid="result-count">{sorted.length}</strong>
+            <strong data-testid="result-count">{ordered.length}</strong>
             <span> / {projects.length} 件展品</span>
+            {state.q && <em>· 已按相关性排序</em>}
             {activeCount > 0 && <em>· 已筛选 {activeCount} 项</em>}
           </p>
           <div className="toolbar__controls">
@@ -213,27 +216,19 @@ export function HomePage({ projects = bundle.projects, liveCount = bundle.liveCo
               <span aria-hidden="true">★</span> 本周精选
             </h3>
             <div className="featured__row">
-              {featured.slice(0, 4).map((project, index) => (
-                <ProjectCard key={project.id} project={project} index={index} view="grid" />
+              {featured.map((project, index) => (
+                <ProjectCard key={project.id} project={project} index={index} highlight={state.q} />
               ))}
             </div>
           </div>
         )}
 
-        {sorted.length > 0 ? (
-          <motion.div layout className={`grid grid--${state.view}`}>
-            {sorted.map((project, index) => (
-              <motion.div
-                key={project.id}
-                layout
-                initial={{ opacity: 0, y: 18, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-              >
-                <ProjectCard project={project} index={index} view={state.view} />
-              </motion.div>
+        {ordered.length > 0 ? (
+          <div className={`grid grid--${state.view}`}>
+            {ordered.map((project, index) => (
+              <ProjectCard key={project.id} project={project} index={index} view={state.view} highlight={state.q} />
             ))}
-          </motion.div>
+          </div>
         ) : (
           <div className="empty" data-testid="empty-state">
             <p className="empty__glyph" aria-hidden="true">

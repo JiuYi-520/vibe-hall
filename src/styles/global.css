@@ -409,7 +409,8 @@ pre {
   font-size: var(--step--2);
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  /* 小字号加字距：用对比度更高的静音色，满足 WCAG AA */
+  color: var(--ink-mute);
 }
 
 .hero__stats dd {
@@ -506,6 +507,8 @@ pre {
 
 .section {
   padding-top: var(--space-7);
+  /* 顶部有 sticky header：锚点跳转时把标题让出来，不被遮住 */
+  scroll-margin-top: 84px;
 }
 
 .section__head {
@@ -565,7 +568,7 @@ pre {
   font-size: var(--step--2);
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-mute);
   margin-right: var(--space-1);
 }
 
@@ -782,14 +785,9 @@ pre {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: var(--space-4);
-  perspective: 1400px;
 }
 
 /* ---------- grid + cards ---------- */
-
-.grid {
-  perspective: 1400px;
-}
 
 .grid--grid {
   display: grid;
@@ -804,8 +802,12 @@ pre {
 
 .card {
   height: 100%;
-  transform-style: preserve-3d;
-  will-change: transform;
+  /* 透视放在卡片本体上，倾斜施加给 card__body 才会生效 */
+  perspective: 1200px;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
+  animation: card-in 460ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 24ms);
 }
 
 .card__body {
@@ -817,6 +819,8 @@ pre {
   backdrop-filter: var(--glass);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
+  transform: rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  transform-style: preserve-3d;
   transition: border-color var(--dur-2) var(--ease-out), box-shadow var(--dur-3) var(--ease-out),
     transform var(--dur-2) var(--ease-out);
 }
@@ -851,6 +855,11 @@ pre {
   position: absolute;
   inset: 0;
   opacity: 0;
+  background: radial-gradient(
+    240px circle at var(--glow-x, 50%) var(--glow-y, 50%),
+    hsl(var(--hue-a) 92% 70% / 0.24),
+    transparent 72%
+  );
   transition: opacity var(--dur-3) var(--ease-out);
   pointer-events: none;
   z-index: 1;
@@ -904,12 +913,36 @@ pre {
 
 .cover--card {
   aspect-ratio: 16 / 9;
+  background-image:
+    radial-gradient(42% 46% at var(--blob-1-x, 26%) var(--blob-1-y, 68%), hsl(var(--hue-b) 92% 62% / 0.55), transparent 72%),
+    radial-gradient(
+      38% 42% at var(--blob-2-x, 76%) var(--blob-2-y, 22%),
+      hsl(calc(var(--hue-a) + 28) 92% 68% / 0.5),
+      transparent 74%
+    ),
+    linear-gradient(var(--cover-rotate, 135deg), hsl(var(--hue-a) 88% 58%), hsl(var(--hue-b) 84% 30%));
+}
+
+.cover--card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(90deg, rgba(10, 10, 18, 0.2) 0 1px, transparent 1px 10%);
+  pointer-events: none;
 }
 
 .cover--hero {
   aspect-ratio: 16 / 10;
   border-radius: var(--radius-lg);
   border: 1px solid var(--line);
+  background-image:
+    radial-gradient(42% 46% at var(--blob-1-x, 26%) var(--blob-1-y, 68%), hsl(var(--hue-b) 92% 62% / 0.5), transparent 72%),
+    radial-gradient(
+      38% 42% at var(--blob-2-x, 76%) var(--blob-2-y, 22%),
+      hsl(calc(var(--hue-a) + 28) 92% 68% / 0.45),
+      transparent 74%
+    ),
+    linear-gradient(var(--cover-rotate, 135deg), hsl(var(--hue-a) 88% 58%), hsl(var(--hue-b) 84% 30%));
 }
 
 .card--list .cover--card {
@@ -1393,7 +1426,7 @@ pre {
   font-size: var(--step--2);
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-mute);
 }
 
 .detail__meta dd {
@@ -1740,6 +1773,63 @@ pre {
 }
 
 /* ---------- toast ---------- */
+
+/* ---------- 入场动画（替换动画库：纯 CSS，全局 --i 做错峰） ---------- */
+
+.enter {
+  animation: enter-up 560ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+@keyframes enter-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+/* ---------- 搜索命中高亮 ---------- */
+
+.hl {
+  background: linear-gradient(180deg, transparent 58%, hsl(var(--hue-a, 212) 92% 62% / 0.42) 58%);
+  color: inherit;
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
+/* ---------- 路由懒加载占位 ---------- */
+
+.route-fallback {
+  padding: var(--space-8) 0;
+  color: var(--ink-faint);
+  text-align: center;
+}
+
+/* ---------- 视图过渡（筛选变化时由浏览器做交叉淡入） ---------- */
+
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 260ms;
+}
 
 .toast {
   position: fixed;

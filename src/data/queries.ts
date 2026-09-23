@@ -126,3 +126,67 @@ export function pickRelated(projects: Project[], current: Project, limit = 3): P
     .slice(0, limit)
     .map((entry) => entry.project)
 }
+
+/** 拆分查询词：空格、中英文逗号与顿号都算分隔。 */
+export function queryTerms(query: string): string[] {
+  return query
+    .trim()
+    .toLowerCase()
+    .split(/[\s,，、]+/)
+    .filter(Boolean)
+}
+
+const FIELD_WEIGHT = { title: 12, titlePrefix: 4, tagline: 6, tags: 5, stack: 4, maker: 3, story: 1 }
+
+/**
+ * 相关性打分：标题命中 > 标签/技术栈/作者 > 简介 > 故事。
+ * 命中位置越靠前分数越高，保证“搜索时先给最像的结果”。
+ */
+export function relevanceScore(project: Project, query: string): number {
+  const terms = queryTerms(query)
+  if (terms.length === 0) return 0
+
+  const title = project.title.toLowerCase()
+  const tagline = project.tagline.toLowerCase()
+  const tags = project.tags.join(' ').toLowerCase()
+  const stack = project.stack.join(' ').toLowerCase()
+  const maker = `${project.maker.name} ${project.maker.handle}`.toLowerCase()
+  const story = `${project.story} ${project.prompt ?? ''}`.toLowerCase()
+
+  let score = 0
+  for (const term of terms) {
+    if (title.includes(term)) score += FIELD_WEIGHT.title + (title.startsWith(term) ? FIELD_WEIGHT.titlePrefix : 0)
+    if (tagline.includes(term)) score += FIELD_WEIGHT.tagline
+    if (tags.includes(term)) score += FIELD_WEIGHT.tags
+    if (stack.includes(term)) score += FIELD_WEIGHT.stack
+    if (maker.includes(term)) score += FIELD_WEIGHT.maker
+    if (story.includes(term)) score += FIELD_WEIGHT.story
+  }
+  return score
+}
+
+/** 搜索态排序：先按相关性，再按用户选择的排序（JS sort 稳定，天然成为并列次序）。 */
+export function rankProjects(projects: Project[], query: string, tieBreak: SortKey = 'trending'): Project[] {
+  if (queryTerms(query).length === 0) return [...projects]
+  return sortProjects(projects, tieBreak).sort((a, b) => relevanceScore(b, query) - relevanceScore(a, query))
+}
+
+/** 精选位：先每个分类各占一席，再按热度补齐，避免同类霸榜。 */
+export function pickFeatured(projects: Project[], limit = 4): Project[] {
+  const ranked = sortProjects(projects, 'trending')
+  const picked: Project[] = []
+  const usedCategories = new Set<string>()
+
+  for (const project of ranked) {
+    if (picked.length >= limit) break
+    if (usedCategories.has(project.category)) continue
+    usedCategories.add(project.category)
+    picked.push(project)
+  }
+  for (const project of ranked) {
+    if (picked.length >= limit) break
+    if (picked.includes(project)) continue
+    picked.push(project)
+  }
+  return sortProjects(picked, 'trending')
+}

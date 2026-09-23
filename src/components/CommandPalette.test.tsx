@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { CommandPalette } from './CommandPalette'
 import { seedProjects } from '../data/seed'
@@ -44,5 +45,41 @@ describe('CommandPalette', () => {
     render(<CommandPalette open projects={seedProjects} onClose={onClose} onSelect={() => {}} />)
     await user.keyboard('{Escape}')
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+})
+
+function Harness() {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)}>
+        打开面板
+      </button>
+      <button type="button">面板外的按钮</button>
+      <CommandPalette open={open} projects={seedProjects} onClose={() => setOpen(false)} onSelect={() => {}} />
+    </>
+  )
+}
+
+describe('CommandPalette 焦点管理', () => {
+  it('keeps Tab focus inside the dialog', async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+    await user.click(screen.getByRole('button', { name: '打开面板' }))
+    const dialog = screen.getByRole('dialog', { name: '快速跳转' })
+
+    for (let index = 0; index < 30; index += 1) {
+      await user.tab()
+      expect(dialog.contains(document.activeElement)).toBe(true)
+    }
+  })
+
+  it('returns focus to the trigger after closing', async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+    const trigger = screen.getByRole('button', { name: '打开面板' })
+    await user.click(trigger)
+    await user.keyboard('{Escape}')
+    expect(document.activeElement).toBe(trigger)
   })
 })

@@ -10,7 +10,7 @@ if (!('ResizeObserver' in globalThis)) {
   Object.defineProperty(globalThis, 'ResizeObserver', { value: ResizeObserverStub })
 }
 
-// jsdom does not implement matchMedia, and framer-motion + our theme hook query it.
+// jsdom does not implement matchMedia, and the theme / reduced-motion hooks query it.
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   configurable: true,

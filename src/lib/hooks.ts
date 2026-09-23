@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 
 export type ThemeName = 'dark' | 'light'
 
@@ -39,32 +39,39 @@ export function useTheme(): [ThemeName, () => void] {
   return [theme, toggle]
 }
 
-export function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false)
+let reducedQuery: MediaQueryList | null = null
+const reducedSubscribers = new Set<() => void>()
 
-  useEffect(() => {
-    const query = window.matchMedia('(prefers-reduced-motion: reduce)')
-    setReduced(query.matches)
-    const onChange = (event: MediaQueryListEvent) => setReduced(event.matches)
-    query.addEventListener('change', onChange)
-    return () => query.removeEventListener('change', onChange)
-  }, [])
-
-  return reduced
+function getReducedQuery(): MediaQueryList | null {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return null
+  reducedQuery ??= window.matchMedia('(prefers-reduced-motion: reduce)')
+  return reducedQuery
 }
 
-export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(false)
+function notifyReduced(): void {
+  for (const subscriber of reducedSubscribers) subscriber()
+}
 
-  useEffect(() => {
-    const media = window.matchMedia(query)
-    setMatches(media.matches)
-    const onChange = (event: MediaQueryListEvent) => setMatches(event.matches)
-    media.addEventListener('change', onChange)
-    return () => media.removeEventListener('change', onChange)
-  }, [query])
+function subscribeReducedMotion(callback: () => void): () => void {
+  const query = getReducedQuery()
+  if (!query) return () => {}
+  reducedSubscribers.add(callback)
+  if (reducedSubscribers.size === 1) query.addEventListener('change', notifyReduced)
+  return () => {
+    reducedSubscribers.delete(callback)
+    if (reducedSubscribers.size === 0) query.removeEventListener('change', notifyReduced)
+  }
+}
 
-  return matches
+function reducedSnapshot(): boolean {
+  return getReducedQuery()?.matches ?? false
+}
+
+/**
+ * 全站共享一个 matchMedia 订阅：几十张卡同时用也不会注册几十个监听器。
+ */
+export function usePrefersReducedMotion(): boolean {
+  return useSyncExternalStore(subscribeReducedMotion, reducedSnapshot, () => false)
 }
 
 /** Global ⌘K / Ctrl+K listener plus a printable-'/' shortcut for the search box. */

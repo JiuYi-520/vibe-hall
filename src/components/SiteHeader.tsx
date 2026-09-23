@@ -32,7 +32,13 @@ export function SiteHeader({ theme, onToggleTheme, count }: SiteHeaderProps) {
       </nav>
 
       <div className="site-actions">
-        <button type="button" className="cmd-trigger" onClick={palette.open}>
+        <button
+          type="button"
+          className="cmd-trigger"
+          onClick={palette.open}
+          aria-haspopup="dialog"
+          aria-expanded={palette.isOpen}
+        >
           <span aria-hidden="true">⌘</span>
           <span className="cmd-trigger__label">快速跳转</span>
           <kbd>K</kbd>

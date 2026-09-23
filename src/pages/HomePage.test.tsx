@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { HomePage } from './HomePage'
 import { seedProjects } from '../data/seed'
 import type { Project } from '../data/types'
@@ -92,5 +92,73 @@ describe('HomePage 文案', () => {
     )
     expect(screen.getAllByTitle('GitHub 星标').length).toBeGreaterThan(0)
     expect(screen.queryAllByTitle('GitHub stars')).toHaveLength(0)
+  })
+})
+
+describe('HomePage 搜索排序', () => {
+  const titleHit: Project = {
+    id: 's1',
+    slug: 's1',
+    title: '潮汐时钟',
+    tagline: '极简屏保',
+    story: '无关内容',
+    category: 'life',
+    tags: [],
+    stack: ['Svelte'],
+    maker: { name: 'A', handle: 'a' },
+    links: [{ kind: 'demo', label: '打开', url: 'https://example.com/a' }],
+    createdAt: '2026-01-01',
+    likes: 1,
+    featured: false,
+    status: 'live',
+    provenance: { source: 'seed' },
+  }
+  const storyHit: Project = {
+    ...titleHit,
+    id: 's2',
+    slug: 's2',
+    title: '完全不同的作品',
+    tagline: '无关介绍',
+    story: '我只是想做一个潮汐时钟，结果做成了别的',
+    likes: 9999,
+  }
+
+  it('ranks a title match above a story-only match while searching', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<HomePage projects={[storyHit, titleHit]} />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+    await user.type(screen.getByRole('searchbox', { name: /搜索/ }), '潮汐时钟')
+    const titles = screen.getAllByRole('heading', { level: 3 }).map((node) => node.textContent ?? '')
+    expect(titles[0]).toBe('潮汐时钟')
+  })
+})
+
+describe('HomePage 锚点', () => {
+  it('把「进入展馆」做成页内滚动，而不是让 hash 路由跳到 /hall', async () => {
+    const user = userEvent.setup()
+    const scrollSpy = vi.spyOn(HTMLElement.prototype, 'scrollIntoView')
+    const initialHash = window.location.hash
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<HomePage projects={seedProjects} />} />
+          <Route path="*" element={<p>不该出现的兜底路由</p>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('link', { name: /进入展馆/ }))
+
+    expect(screen.queryByText('不该出现的兜底路由')).not.toBeInTheDocument()
+    expect(screen.getByTestId('result-count')).toBeInTheDocument()
+    expect(scrollSpy).toHaveBeenCalled()
+    expect(window.location.hash).toBe(initialHash)
+    scrollSpy.mockRestore()
   })
 })

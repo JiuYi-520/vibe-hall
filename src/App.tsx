@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { HashRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { loadProjects } from './data/loadProjects'
 import { useShortcuts, useTheme } from './lib/hooks'
@@ -6,9 +6,21 @@ import { PaletteContext } from './lib/paletteContext'
 import { CommandPalette } from './components/CommandPalette'
 import { SiteHeader } from './components/SiteHeader'
 import { HomePage } from './pages/HomePage'
-import { ProjectPage } from './pages/ProjectPage'
-import { SubmitPage } from './pages/SubmitPage'
-import { AboutPage } from './pages/AboutPage'
+
+// 详情/提交/关于三个页面按需加载：首屏只下载展馆本身需要的代码。
+const ProjectPage = lazy(() => import('./pages/ProjectPage').then((module) => ({ default: module.ProjectPage })))
+const SubmitPage = lazy(() => import('./pages/SubmitPage').then((module) => ({ default: module.SubmitPage })))
+const AboutPage = lazy(() => import('./pages/AboutPage').then((module) => ({ default: module.AboutPage })))
+
+function RouteFallback() {
+  return (
+    <div className="section">
+      <p className="route-fallback" role="status">
+        正在打开…
+      </p>
+    </div>
+  )
+}
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -38,8 +50,13 @@ function Shell() {
       onPalette: () => setPaletteOpen((current) => !current),
       onSearch: () => {
         const input = document.getElementById('hall-search')
-        if (input instanceof HTMLInputElement) input.focus()
-        else navigate('/')
+        if (input instanceof HTMLInputElement) {
+          input.scrollIntoView({ block: 'center' })
+          input.focus()
+          input.select()
+        } else {
+          navigate('/')
+        }
       },
     }),
     [navigate],
@@ -53,9 +70,17 @@ function Shell() {
     [navigate],
   )
 
+  /** 跳过导航链接同样不能触发 hash 路由跳转。 */
+  const skipToHall = useCallback((event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault()
+    const hall = document.getElementById('hall')
+    hall?.scrollIntoView({ block: 'start' })
+    hall?.focus?.()
+  }, [])
+
   return (
     <PaletteContext.Provider value={paletteApi}>
-      <a className="skip-link" href="#hall">
+      <a className="skip-link" href="#hall" onClick={skipToHall}>
         跳到展馆
       </a>
       <div className="aurora" aria-hidden="true">
@@ -68,16 +93,20 @@ function Shell() {
       <ScrollToTop />
       <SiteHeader theme={theme} onToggleTheme={toggleTheme} count={bundle.projects.length} />
       <main className="site-main">
-        <Routes>
-          <Route
-            path="/"
-            element={<HomePage projects={bundle.projects} liveCount={bundle.liveCount} fetchedAt={bundle.fetchedAt ?? null} />}
-          />
-          <Route path="/p/:slug" element={<ProjectPage projects={bundle.projects} />} />
-          <Route path="/submit" element={<SubmitPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="*" element={<ProjectPage projects={bundle.projects} />} />
-        </Routes>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <HomePage projects={bundle.projects} liveCount={bundle.liveCount} fetchedAt={bundle.fetchedAt ?? null} />
+              }
+            />
+            <Route path="/p/:slug" element={<ProjectPage projects={bundle.projects} />} />
+            <Route path="/submit" element={<SubmitPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="*" element={<ProjectPage projects={bundle.projects} />} />
+          </Routes>
+        </Suspense>
       </main>
       <footer className="site-footer">
         <p>

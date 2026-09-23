@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import type { Project } from './types'
-import { buildFacets, computeStats, filterProjects, sortProjects, trendingScore } from './queries'
+import {
+  buildFacets,
+  computeStats,
+  filterProjects,
+  pickFeatured,
+  rankProjects,
+  relevanceScore,
+  sortProjects,
+  trendingScore,
+} from './queries'
 
 function makeProject(overrides: Partial<Project> & Pick<Project, 'id' | 'slug' | 'title'>): Project {
   return {
@@ -129,5 +138,51 @@ describe('facets and stats', () => {
     expect(stats.makers).toBe(1)
     expect(stats.stacks).toBe(5)
     expect(stats.reactions).toBe(168)
+  })
+})
+
+describe('relevance ranking', () => {
+  const titleHit = makeProject({ id: 'r1', slug: 'title-hit', title: '潮汐时钟', tagline: '极简屏保' })
+  const storyHit = makeProject({
+    id: 'r2',
+    slug: 'story-hit',
+    title: '别的作品',
+    tagline: '无关介绍',
+    story: '我只是想做一个潮汐时钟，结果做成了别的东西',
+  })
+  const stackHit = makeProject({ id: 'r3', slug: 'stack-hit', title: '看板', stack: ['潮汐时钟'], tagline: '无关' })
+
+  it('scores a title hit above a story hit', () => {
+    expect(relevanceScore(titleHit, '潮汐')).toBeGreaterThan(relevanceScore(storyHit, '潮汐'))
+  })
+
+  it('orders matches by relevance and falls back to heat for ties', () => {
+    expect(rankProjects([storyHit, stackHit, titleHit], '潮汐').map((p) => p.slug)).toEqual([
+      'title-hit',
+      'stack-hit',
+      'story-hit',
+    ])
+  })
+
+  it('keeps the incoming order when the query is empty', () => {
+    const input = [storyHit, titleHit, stackHit]
+    expect(rankProjects(input, '   ').map((p) => p.slug)).toEqual(input.map((p) => p.slug))
+  })
+})
+
+describe('pickFeatured', () => {
+  it('spreads featured entries across categories before repeating one', () => {
+    const hotTool = makeProject({ id: 'f1', slug: 'tool-hot', title: '工具一', category: 'tool', likes: 900 })
+    const warmTool = makeProject({ id: 'f2', slug: 'tool-warm', title: '工具二', category: 'tool', likes: 800 })
+    const toolThin = makeProject({ id: 'f3', slug: 'tool-thin', title: '工具三', category: 'tool', likes: 700 })
+    const game = makeProject({ id: 'f4', slug: 'game-one', title: '游戏一', category: 'game', likes: 100 })
+    const visual = makeProject({ id: 'f5', slug: 'visual-one', title: '视觉一', category: 'visual', likes: 90 })
+
+    const picked = pickFeatured([hotTool, warmTool, toolThin, game, visual], 4)
+    expect(picked).toHaveLength(4)
+    expect(picked.map((p) => p.slug)).toContain('game-one')
+    expect(picked.map((p) => p.slug)).toContain('visual-one')
+    expect(picked.filter((p) => p.category === 'tool')).toHaveLength(2)
+    expect(picked.map((p) => p.slug)).not.toContain('tool-thin')
   })
 })

@@ -6,10 +6,15 @@
  * Usage: npm run verify:ui   (expects a server on http://localhost:4173)
  */
 import { mkdir } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import { chromium } from 'playwright-core'
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:4173'
 const OUT = 'screenshots'
+const require = createRequire(import.meta.url)
+
+/** 首屏预算：优化后的实测值留出余量，超过即视为回退。 */
+const BUDGET = { jsBytes: 340_000, cssBytes: 40_000, nodes: 1_400 }
 
 const results = []
 const consoleErrors = []
@@ -51,6 +56,51 @@ await page.waitForTimeout(600)
 await page.screenshot({ path: `${OUT}/01b-hall-grid.png`, fullPage: false })
 await page.evaluate(() => window.scrollTo({ top: 0 }))
 await page.waitForTimeout(300)
+
+// ---------- 首屏预算（domcontentloaded 阶段的实际传输量）----------
+const budget = await page.evaluate(() => {
+  const entries = performance.getEntriesByType('resource')
+  const sum = (type) =>
+    entries
+      .filter((entry) => entry.name.endsWith(type))
+      .reduce((total, entry) => total + (entry.transferSize || entry.encodedBodySize || 0), 0)
+  return {
+    jsBytes: sum('.js'),
+    cssBytes: sum('.css'),
+    nodes: document.querySelectorAll('*').length,
+    fcpMs: Math.round(performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? 0),
+  }
+})
+check('首屏 JS 体积在预算内', budget.jsBytes <= BUDGET.jsBytes, `${budget.jsBytes} / ${BUDGET.jsBytes} 字节`)
+check('首屏 CSS 体积在预算内', budget.cssBytes <= BUDGET.cssBytes, `${budget.cssBytes} / ${BUDGET.cssBytes} 字节`)
+check('首屏 DOM 节点数在预算内', budget.nodes <= BUDGET.nodes, `${budget.nodes} / ${BUDGET.nodes}`)
+
+// ---------- 锚点：标题不能被 sticky header 遮住 ----------
+await page.getByRole('link', { name: /进入展馆/ }).click()
+await page.waitForTimeout(700)
+const anchor = await page.evaluate(() => {
+  const header = document.querySelector('.site-header')?.getBoundingClientRect()
+  const heading = document.querySelector('#hall h2')?.getBoundingClientRect()
+  return { headerBottom: header?.bottom ?? 0, headingTop: heading?.top ?? 0 }
+})
+check('锚点跳转后标题未被顶栏遮挡', anchor.headingTop >= anchor.headerBottom - 2, `标题顶 ${Math.round(anchor.headingTop)} / 顶栏底 ${Math.round(anchor.headerBottom)}`)
+
+// ---------- 无工具扫描：axe-core（含色彩对比度）----------
+await page.addScriptTag({ path: require.resolve('axe-core/axe.min.js') })
+const scan = await page.evaluate(async () => {
+  const results = await window.axe.run(document, {
+    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] },
+  })
+  return results.violations.map((violation) => ({
+    id: violation.id,
+    impact: violation.impact,
+    help: violation.help,
+    targets: violation.nodes.slice(0, 3).map((node) => node.target.join(' ')),
+  }))
+})
+const blocking = scan.filter((item) => item.impact === 'critical' || item.impact === 'serious')
+check('axe-core 无严重无障碍问题', blocking.length === 0, blocking.length ? JSON.stringify(blocking) : '0 条严重/致命')
+if (scan.length) console.log(`  axe-core 全部问题：${JSON.stringify(scan, null, 2)}`)
 
 // card tilt + hover state should not throw
 await page.locator('.card').first().hover()
@@ -95,12 +145,51 @@ await page.getByRole('button', { name: '网格视图' }).click()
 await page.waitForTimeout(400)
 
 // ---------- command palette ----------
+const focusBefore = await page.evaluate(() => {
+  const element = document.activeElement
+  return element instanceof HTMLElement ? element.className || element.tagName : ''
+})
 await page.keyboard.press('Control+k')
 await page.waitForTimeout(400)
 check('palette opens on Ctrl+K', await page.getByRole('dialog', { name: '快速跳转' }).isVisible())
+check(
+  '打开面板时触发按钮标记为展开',
+  (await page.locator('.cmd-trigger').getAttribute('aria-expanded')) === 'true',
+)
 await page.screenshot({ path: `${OUT}/05-command-palette.png` })
+
+// 焦点陷阱 + 关闭后焦点归还（真实浏览器里验一遍）
+let stayedInside = true
+for (let index = 0; index < 20; index += 1) {
+  await page.keyboard.press('Tab')
+  const inside = await page.evaluate(() => {
+    const dialog = document.querySelector('[role="dialog"][aria-label="快速跳转"]')
+    return !!dialog && !!document.activeElement && dialog.contains(document.activeElement)
+  })
+  if (!inside) {
+    stayedInside = false
+    break
+  }
+}
+check('Tab 焦点被锁在命令面板内', stayedInside)
+await page.keyboard.press('Escape')
+await page.waitForTimeout(300)
+const focusAfter = await page.evaluate(() => {
+  const element = document.activeElement
+  return element instanceof HTMLElement ? element.className || element.tagName : ''
+})
+check('关闭面板后焦点回到打开它的元素', focusAfter === focusBefore && focusAfter !== 'BODY', `${focusBefore} → ${focusAfter}`)
+check(
+  '关闭面板后触发按钮标记为收起',
+  (await page.locator('.cmd-trigger').getAttribute('aria-expanded')) === 'false',
+)
+
+await page.keyboard.press('Control+k')
+await page.waitForTimeout(300)
 await page.getByLabel('搜索作品、作者或技术栈').fill('潮汐')
 await page.waitForTimeout(300)
+const highlighted = await page.locator('.palette__item .hl').first().innerText()
+check('搜索结果命中部分高亮', highlighted.includes('潮汐'), highlighted)
 await page.keyboard.press('Enter')
 await page.waitForTimeout(600)
 check('palette navigates to the project', page.url().includes('/p/tide-clock'), page.url())
@@ -133,6 +222,18 @@ await page.waitForTimeout(700)
 const theme = await page.evaluate(() => document.documentElement.dataset.theme)
 check('theme toggle flips the theme', theme !== beforeTheme && theme === 'light', String(theme))
 await page.screenshot({ path: `${OUT}/08-home-light.png` })
+
+// 浅色主题同样跑一次 axe（含对比度）
+await page.addScriptTag({ path: require.resolve('axe-core/axe.min.js') })
+const lightScan = await page.evaluate(async () => {
+  const results = await window.axe.run(document, {
+    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] },
+  })
+  return results.violations.map((violation) => ({ id: violation.id, impact: violation.impact, targets: violation.nodes.slice(0, 3).map((node) => node.target.join(' ')) }))
+})
+const lightBlocking = lightScan.filter((item) => item.impact === 'critical' || item.impact === 'serious')
+check('浅色主题 axe-core 无严重问题', lightBlocking.length === 0, lightBlocking.length ? JSON.stringify(lightBlocking) : '0 条严重/致命')
+
 await page.locator('.icon-btn').click()
 await page.waitForTimeout(500)
 const backTheme = await page.evaluate(() => document.documentElement.dataset.theme)
