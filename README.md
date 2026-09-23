@@ -17,9 +17,9 @@ npm install
 npm run dev            # 开发服务器 http://localhost:5173
 npm run build          # 类型检查 + 生产构建（dist/）
 npm run preview        # 预览构建产物 http://localhost:4173
-npm test               # 187 项单元/组件测试
+npm test               # 189 项单元/组件测试
 npm run fetch:github   # 拉取真实 GitHub 作品到 src/data/github-live.json
-npm run verify:ui      # 用真实浏览器（Edge）跑 88 项检查（含 UI 探针）并截图
+npm run verify:ui      # 用真实浏览器（Edge）跑 90 项检查（含 UI 探针）并截图
 npm run measure        # 采集首屏体积 / DOM / 长任务等指标（可与基线对比）
 ```
 
@@ -67,6 +67,14 @@ GitHub 条目的 story 字段是仓库自述原文（带“仓库自述（原文
 ## 侧边栏与布局
 
 ## 点赞与评论
+
+## 展馆版式：一行一个案例
+
+- 默认版式是**单行列表**：一个作品占一整行（左侧封面跨两行，右侧是标题、简介、技术栈与作者/数据），
+  状态写进 URL 的 `view=list`；想密集浏览可以点右上角切回 `view=grid`。
+- 「本周精选」不再是一排大卡片（那些作品在下面的列表里会重复出现），改成一行文字条：
+  `01 Codeg · 02 霓虹看板 · …`，点进去即可；「只看精选」筛选也还在。
+- 窄屏（≤820px）下同一张卡片自动折叠成竖版，仍然是"一行一个"。
 
 | 位置 | 能做什么 | 存储 |
 | --- | --- | --- |

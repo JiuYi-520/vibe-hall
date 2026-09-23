@@ -211,17 +211,16 @@ export function HomePage({
             <h3 className="featured__title">
               <span aria-hidden="true">★</span> 本周精选
             </h3>
-            <div className="featured__row">
+            <ul className="featured__strip">
               {featured.map((project, index) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  index={index}
-                  highlight={state.q}
-                  commentCount={commentCounts.get(project.slug) ?? 0}
-                />
+                <li key={project.id}>
+                  <Link to={`/p/${project.slug}`}>
+                    <span aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+                    {project.title}
+                  </Link>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         )}
 

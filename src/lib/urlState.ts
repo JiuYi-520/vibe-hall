@@ -22,7 +22,8 @@ export const DEFAULT_GALLERY_STATE: GalleryState = {
   stack: [],
   statuses: [],
   sort: 'trending',
-  view: 'grid',
+  // 一个案例占一行：默认用单行列表版式，想密集看可以切回网格
+  view: 'list',
   featured: false,
 }
 

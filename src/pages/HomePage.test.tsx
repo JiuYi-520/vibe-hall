@@ -195,3 +195,19 @@ describe('首页英雄区文案', () => {
     expect(screen.getByText(/示例数据/)).toBeInTheDocument()
   })
 })
+
+describe('首页布局默认值', () => {
+  it('默认一行一个案例（列表版式），且卡片用横向排列', () => {
+    renderHome()
+    expect(document.querySelector('.grid--list')).not.toBeNull()
+    expect(document.querySelector('.grid--grid')).toBeNull()
+    expect(document.querySelectorAll('.card--list').length).toBeGreaterThan(0)
+  })
+
+  it('仍然可以切回网格：链接里带 view=grid 时用网格版式', () => {
+    renderHome('/?view=grid')
+    expect(document.querySelector('.grid--grid')).not.toBeNull()
+    expect(document.querySelector('.grid--list')).toBeNull()
+    expect(document.querySelectorAll('.card--grid').length).toBeGreaterThan(0)
+  })
+})

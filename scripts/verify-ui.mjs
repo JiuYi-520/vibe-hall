@@ -58,7 +58,21 @@ await page.screenshot({ path: `${OUT}/01-home-dark.png`, fullPage: false })
 
 await page.locator('#hall').scrollIntoViewIfNeeded()
 await page.waitForTimeout(600)
-await page.screenshot({ path: `${OUT}/01b-hall-grid.png`, fullPage: false })
+await page.screenshot({ path: `${OUT}/01b-hall-rows.png`, fullPage: false })
+
+// 一行一个案例：量两张卡的位置，而不是看类名
+const rowsDefault = await page.evaluate(() => {
+  const cards = [...document.querySelectorAll('.grid .card')].slice(0, 2)
+  return cards.map((card) => {
+    const rect = card.getBoundingClientRect()
+    return { top: Math.round(rect.top), left: Math.round(rect.left), width: Math.round(rect.width) }
+  })
+})
+check(
+  '默认一行一个案例（两张卡堆叠且等宽）',
+  rowsDefault.length === 2 && Math.abs(rowsDefault[0].top - rowsDefault[1].top) > 20 && Math.abs(rowsDefault[0].width - rowsDefault[1].width) <= 2,
+  JSON.stringify(rowsDefault),
+)
 await page.evaluate(() => window.scrollTo({ top: 0 }))
 await page.waitForTimeout(300)
 
@@ -144,9 +158,23 @@ await page.getByRole('button', { name: '清空搜索' }).click()
 await page.waitForTimeout(300)
 await page.getByRole('button', { name: '列表视图' }).click()
 await page.waitForTimeout(500)
-check('list view switches the grid', (await page.locator('.grid--list').count()) === 1)
+check('列表版式可用', (await page.locator('.grid--list').count()) === 1)
 await page.screenshot({ path: `${OUT}/04-list-view.png` })
 await page.getByRole('button', { name: '网格视图' }).click()
+await page.waitForTimeout(500)
+const rowsGrid = await page.evaluate(() => {
+  const cards = [...document.querySelectorAll('.grid .card')].slice(0, 2)
+  return cards.map((card) => {
+    const rect = card.getBoundingClientRect()
+    return { top: Math.round(rect.top), left: Math.round(rect.left) }
+  })
+})
+check(
+  '切到网格后两张卡并排',
+  rowsGrid.length === 2 && Math.abs(rowsGrid[0].top - rowsGrid[1].top) <= 2 && rowsGrid[1].left > rowsGrid[0].left,
+  JSON.stringify(rowsGrid),
+)
+await page.getByRole('button', { name: '列表视图' }).click()
 await page.waitForTimeout(400)
 
 // ---------- command palette ----------
