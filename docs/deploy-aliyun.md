@@ -33,7 +33,7 @@ sudo dnf module install nodejs:22/common -y
 ## 3. 把代码放上去
 
 ```bash
-git clone <你的仓库地址> vibe-hall && cd vibe-hall
+git clone https://github.com/JiuYi-520/vibe-hall.git && cd vibe-hall
 npm ci             # 没有 lock 文件就用 npm install
 npm run build      # 产出 dist/（前端静态文件）
 ```
