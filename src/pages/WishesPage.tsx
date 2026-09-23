@@ -11,7 +11,7 @@ import { type WishBoard, useWishes, wishBoard as defaultBoard } from '../lib/wis
 import { type IdentityBoard, identityBoard as defaultIdentity, useIdentity } from '../lib/identityStore'
 import { type CreditBoard, creditBoard as defaultCredits, useCredits } from '../lib/creditBoard'
 import { WishCard } from '../components/WishCard'
-import { API_BASE, ensureServerToken, getServerToken, serverApi, toWish, useHallServer } from '../lib/hallServer'
+import { apiLabel, ensureServerToken, getServerToken, serverApi, toWish, useHallServer } from '../lib/hallServer'
 
 interface WishesPageProps {
   board?: WishBoard
@@ -337,7 +337,7 @@ export function WishesPage({
         <strong data-testid="wish-count">{filtered.length}</strong>
         <span>
           / {activeWishes.length} 条愿望 ·{' '}
-          {online ? `后端在线（${API_BASE}，多设备可见；本机草稿仍保留，离线时可见）` : '单机版，只有本机能看见'}
+          {online ? `后端在线（${apiLabel()}，多设备可见；本机草稿仍保留，离线时可见）` : '单机版，只有本机能看见'}
         </span>
         {online && (
           <button type="button" className="link-btn" onClick={() => void refreshRemote()}>

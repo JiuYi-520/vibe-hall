@@ -17,10 +17,11 @@ npm install
 npm run dev            # 开发服务器 http://localhost:5173
 npm run build          # 类型检查 + 生产构建（dist/）
 npm run preview        # 预览构建产物 http://localhost:4173
-npm test               # 232 项测试（含 17 项后端真实 HTTP/SQLite 测试）
+npm test               # 239 项测试（含 24 项后端真实 HTTP/SQLite 测试）
 npm run fetch:github   # 拉取真实 GitHub 作品到 src/data/github-live.json
-npm run verify:ui      # 用真实浏览器（Edge）跑 111 项检查（含 UI 探针与后端端到端）并截图
+npm run verify:ui      # 用真实浏览器（Edge）跑 116 项检查（含 UI 探针与两种部署形态）并截图
 npm run server         # 启动本地后端 http://127.0.0.1:8787（可选，见 docs/backend.md）
+npm start              # 同一条命令同时托管前端与 API（部署形态，见 docs/deploy-aliyun.md）
 npm run measure        # 采集首屏体积 / DOM / 长任务等指标（可与基线对比）
 ```
 
@@ -74,6 +75,18 @@ GitHub 条目的 story 字段是仓库自述原文（带“仓库自述（原文
 ## 个人中心与积分（`/#/me`）
 
 ## 后端（可选，本地自托管）
+
+### 部署到服务器（一条命令）
+
+```bash
+npm ci && npm run build
+HOST=0.0.0.0 PORT=8787 STATIC_ROOT=dist HALL_DB=/srv/vibe-hall/hall.sqlite npm start
+# 然后访问 http://<服务器公网IP>:8787 —— 前端与 API 同一个端口，不需要 nginx，也不需要配 CORS
+```
+
+前端地址解析顺序：`VITE_API_BASE`（若构建时指定）→ **同源** → `http://localhost:8787`；
+按顺序取第一个能应答 `/api/health` 的地址，之后所有请求都用它。阿里云购买、安全组、systemd、免费证书、备份、
+预算告警与安全边界见 [docs/deploy-aliyun.md](docs/deploy-aliyun.md)。
 
 ```powershell
 npm run server   # 零依赖：node:http + node:sqlite，数据落 server/hall.sqlite

@@ -3,8 +3,27 @@ import type { ForumPost, PostKind } from '../data/forumTypes'
 import type { Wish, WishStatus } from '../data/wishTypes'
 import type { CategoryId } from '../data/types'
 
-/** 后端地址：默认本机 8787，可用 VITE_API_BASE 覆盖。 */
-export const API_BASE = (import.meta.env?.VITE_API_BASE as string | undefined) ?? 'http://localhost:8787'
+/**
+ * 后端地址的解析顺序：
+ * 1. 构建时用 VITE_API_BASE 指定（前后端分开部署时用，一旦指定就不再回落）；
+ * 2. 否则先试**同源**（前端与 API 由同一进程/域名提供，服务器上就是这样）；
+ * 3. 再试本机 `http://localhost:8787`（本地 preview + 单独起后端）。
+ * 探测时按顺序取第一个能应答的地址，之后所有请求都用它。
+ */
+const CONFIGURED_BASE = import.meta.env?.VITE_API_BASE as string | undefined
+const CANDIDATES = CONFIGURED_BASE ? [CONFIGURED_BASE] : ['', 'http://localhost:8787']
+let resolvedBase = CANDIDATES[0]
+
+/** 当前实际使用的后端地址（同源时为空字符串）。 */
+export function apiBase(): string {
+  return resolvedBase
+}
+
+/** 给人看的地址：同源时显示当前站点。 */
+export function apiLabel(): string {
+  if (resolvedBase) return resolvedBase
+  return typeof window !== 'undefined' ? window.location.origin : '同源'
+}
 
 const TOKEN_KEY = 'vibe-hall:token'
 const TIMEOUT_MS = 3500
@@ -38,10 +57,18 @@ export async function apiFetch<T>(
   path: string,
   { method = 'GET', body, token, timeoutMs = TIMEOUT_MS }: { method?: string; body?: unknown; token?: string; timeoutMs?: number } = {},
 ): Promise<ApiResult<T>> {
+  return apiFetchAt<T>(resolvedBase, path, { method, body, token, timeoutMs })
+}
+
+async function apiFetchAt<T>(
+  base: string,
+  path: string,
+  { method = 'GET', body, token, timeoutMs = TIMEOUT_MS }: { method?: string; body?: unknown; token?: string; timeoutMs?: number } = {},
+): Promise<ApiResult<T>> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
-    const response = await fetch(`${API_BASE}${path}`, {
+    const response = await fetch(`${base}${path}`, {
       method,
       signal: controller.signal,
       headers: {
@@ -67,8 +94,15 @@ export function useHallServer(): { status: ServerStatus; refresh: () => void } {
   const [status, setStatus] = useState<ServerStatus>('checking')
 
   const probe = useCallback(async () => {
-    const result = await apiFetch<{ ok: boolean }>('/api/health', { timeoutMs: 2000 })
-    setStatus(result.ok && result.data?.ok ? 'online' : 'offline')
+    for (const candidate of CANDIDATES) {
+      const result = await apiFetchAt<{ ok: boolean }>(candidate, '/api/health', { timeoutMs: 2000 })
+      if (result.ok && result.data?.ok) {
+        resolvedBase = candidate
+        setStatus('online')
+        return
+      }
+    }
+    setStatus('offline')
   }, [])
 
   useEffect(() => {

@@ -759,6 +759,79 @@ await calm.close()
 // ---------- ui-verification 探针：目标尺寸 / 焦点遍历 / 视口压力 / 网络失败 ----------
 await browser.close()
 
+// ---------- 生产形态：单进程同时托管前端与 API（服务器上就是这样跑）----------
+{
+  const dbFile = path.join(tmpdir(), `vibe-hall-single-${Date.now()}.sqlite`)
+  const port = '8790'
+  const base = `http://127.0.0.1:${port}`
+  const child = spawn(process.execPath, ['server/app.mjs'], {
+    env: { ...process.env, PORT: port, HALL_DB: dbFile, STATIC_ROOT: 'dist', HOST: '127.0.0.1' },
+    stdio: 'ignore',
+  })
+  let stopped = false
+  const stop = async () => {
+    if (stopped) return
+    stopped = true
+    await new Promise((resolve) => {
+      child.once('exit', () => resolve())
+      child.kill()
+      setTimeout(resolve, 2000)
+    })
+  }
+
+  let ready = false
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    try {
+      const response = await fetch(`${base}/api/health`)
+      if (response.ok) {
+        ready = true
+        break
+      }
+    } catch {
+      // 还在启动
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250))
+  }
+
+  const single = await chromium.launch({ channel: 'msedge', headless: true })
+  try {
+    check('单进程同时托管前端与 API：服务能起来', ready)
+
+    const rootResponse = await fetch(`${base}/`)
+    const rootHtml = await rootResponse.text()
+    check('同一个端口直接返回前端页面', rootResponse.status === 200 && rootHtml.includes('VIBE HALL'), `HTTP ${rootResponse.status}`)
+
+    const page2 = await single.newPage({ viewport: { width: 1400, height: 1000 }, colorScheme: 'dark' })
+    await page2.goto(`${base}/#/me`, { waitUntil: 'networkidle' })
+    await page2.getByLabel('昵称').fill('单进程验证机')
+    await page2.getByRole('button', { name: '保存身份' }).click()
+    await page2.waitForTimeout(400)
+    await page2.goto(`${base}/#/wishes`, { waitUntil: 'networkidle' })
+    await page2.waitForTimeout(1200)
+    check('同源部署下前端识别到后端在线', (await page2.locator('.site-sidebar__mode').innerText()).includes('后端在线'))
+    check('同源部署不需要配 CORS 地址', (await page2.locator('.wishes__bar').innerText()).includes(base), base)
+
+    const title = '单进程验证：想要一个每周自动整理照片的工具'
+    await page2.getByRole('button', { name: /贴一个新愿望/ }).click()
+    const form2 = page2.getByTestId('wish-form')
+    await form2.getByLabel('愿望标题').fill(title)
+    await form2.getByLabel('愿望描述').fill('按周把手机照片归到月份文件夹，顺手挑出重复的。')
+    await form2.getByRole('button', { name: '贴到愿望墙' }).click()
+    await page2.waitForTimeout(1200)
+    const listed = await (await fetch(`${base}/api/wishes`)).json()
+    check(
+      '同源写入同样落到后端数据库',
+      listed.wishes.some((wish) => wish.title === title),
+      `${listed.wishes.length} 条`,
+    )
+    await page2.screenshot({ path: `${OUT}/22-single-process.png`, fullPage: false })
+    await page2.close()
+  } finally {
+    await single.close()
+    await stop()
+  }
+}
+
 {
   const probeBrowser = await chromium.launch({ channel: 'msedge', headless: true })
   const probe = await probeBrowser.newPage({ viewport: { width: 1280, height: 900 }, colorScheme: 'dark' })

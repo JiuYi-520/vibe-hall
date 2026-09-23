@@ -1,4 +1,7 @@
 // @vitest-environment node
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { startServer } from './app.mjs'
 
@@ -151,5 +154,90 @@ describe('论坛（真实 HTTP）', () => {
     const token = await register()
     const unknownAction = await post('/api/wishes/whatever/blah', {}, token)
     expect(unknownAction.status).toBe(404)
+  })
+})
+
+describe('同一进程托管前端（部署形态）', () => {
+  let staticRoot
+  let hallStatic
+
+  beforeEach(async () => {
+    staticRoot = mkdtempSync(path.join(tmpdir(), 'vibe-hall-dist-'))
+    mkdirSync(path.join(staticRoot, 'assets'))
+    writeFileSync(path.join(staticRoot, 'index.html'), '<!doctype html><title>VIBE HALL</title><div id="root"></div>')
+    writeFileSync(path.join(staticRoot, 'assets', 'app.js'), 'console.log("hall")')
+    writeFileSync(path.join(staticRoot, '..', 'secret.txt'), '不该被读到')
+    hallStatic = await startServer({ port: 0, file: ':memory:', staticRoot })
+  })
+
+  afterEach(async () => {
+    await hallStatic?.close()
+    rmSync(staticRoot, { recursive: true, force: true })
+  })
+
+  const get = async (path) => {
+    const response = await fetch(`${hallStatic.url}${path}`)
+    return { status: response.status, type: response.headers.get('content-type'), text: await response.text() }
+  }
+
+  it('根路径返回 index.html', async () => {
+    const root = await get('/')
+    expect(root.status).toBe(200)
+    expect(root.type).toContain('text/html')
+    expect(root.text).toContain('VIBE HALL')
+  })
+
+  it('静态资源带正确的 content-type', async () => {
+    const asset = await get('/assets/app.js')
+    expect(asset.status).toBe(200)
+    expect(asset.type).toContain('javascript')
+    expect(asset.text).toContain('hall')
+  })
+
+  it('前端路由（如 /wishes）回落 index.html，而不是 404', async () => {
+    const route = await get('/wishes')
+    expect(route.status).toBe(200)
+    expect(route.text).toContain('VIBE HALL')
+  })
+
+  it('API 仍然优先于静态文件', async () => {
+    const health = await get('/api/health')
+    expect(health.status).toBe(200)
+    expect(JSON.parse(health.text)).toMatchObject({ ok: true, storage: 'sqlite' })
+  })
+
+  it('不允许目录穿越读到静态根之外的文件', async () => {
+    const escaped = await get('/..%2Fsecret.txt')
+    expect(escaped.text).not.toContain('不该被读到')
+    const encoded = await get('/%2e%2e%2fsecret.txt')
+    expect(encoded.text).not.toContain('不该被读到')
+  })
+})
+
+describe('限流（公网必备）', () => {
+  it('同一来源超过阈值后返回 429，且带明确错误码', async () => {
+    const hall = await startServer({ port: 0, file: ':memory:', rateLimit: { windowMs: 60_000, max: 5 } })
+    try {
+      const home = (path) => fetch(`${hall.url}${path}`)
+      for (let index = 0; index < 5; index += 1) {
+        expect((await home('/api/health')).status).toBe(200)
+      }
+      const blocked = await home('/api/health')
+      expect(blocked.status).toBe(429)
+      expect((await blocked.json()).error.code).toBe('rate-limited')
+    } finally {
+      await hall.close()
+    }
+  })
+
+  it('默认限流阈值足够宽，正常浏览不会被误伤', async () => {
+    const hall = await startServer({ port: 0, file: ':memory:' })
+    try {
+      for (let index = 0; index < 40; index += 1) {
+        expect((await fetch(`${hall.url}/api/health`)).status).toBe(200)
+      }
+    } finally {
+      await hall.close()
+    }
   })
 })
