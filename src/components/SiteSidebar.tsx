@@ -3,6 +3,7 @@ import { Link, NavLink } from 'react-router-dom'
 import { useIdentity } from '../lib/identityStore'
 import { useCredits } from '../lib/creditBoard'
 import { summarize } from '../data/credits'
+import { useHallServer } from '../lib/hallServer'
 
 interface SiteSidebarProps {
   open: boolean
@@ -24,6 +25,7 @@ export function SiteSidebar({ open, narrow, onClose }: SiteSidebarProps) {
   const profile = useIdentity()
   const credits = useCredits()
   const creditBalance = summarize(credits.entries).balance
+  const server = useHallServer()
 
   // 抽屉打开时：Esc 关闭。收起时整块 inert，里面的链接不会被 Tab 找到。
   useEffect(() => {
@@ -54,6 +56,14 @@ export function SiteSidebar({ open, narrow, onClose }: SiteSidebarProps) {
       </nav>
 
       <div className="site-sidebar__me">
+        <p className={`site-sidebar__mode site-sidebar__mode--${server.status}`}>
+          {server.status === 'online' ? '后端在线 · 多设备可见' : server.status === 'checking' ? '正在探测后端…' : '本机模式 · 只在本机'}
+          {server.status === 'offline' && (
+            <button type="button" className="link-btn" onClick={server.refresh}>
+              重试
+            </button>
+          )}
+        </p>
         {profile ? (
           <Link className="site-sidebar__me-card" to="/me">
             <span className="me-chip__dot" aria-hidden="true" style={{ ['--hue-a' as string]: profile.hue }}>

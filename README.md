@@ -17,9 +17,10 @@ npm install
 npm run dev            # 开发服务器 http://localhost:5173
 npm run build          # 类型检查 + 生产构建（dist/）
 npm run preview        # 预览构建产物 http://localhost:4173
-npm test               # 215 项单元/组件测试
+npm test               # 232 项测试（含 17 项后端真实 HTTP/SQLite 测试）
 npm run fetch:github   # 拉取真实 GitHub 作品到 src/data/github-live.json
-npm run verify:ui      # 用真实浏览器（Edge）跑 105 项检查（含 UI 探针）并截图
+npm run verify:ui      # 用真实浏览器（Edge）跑 111 项检查（含 UI 探针与后端端到端）并截图
+npm run server         # 启动本地后端 http://127.0.0.1:8787（可选，见 docs/backend.md）
 npm run measure        # 采集首屏体积 / DOM / 长任务等指标（可与基线对比）
 ```
 
@@ -71,6 +72,23 @@ GitHub 条目的 story 字段是仓库自述原文（带“仓库自述（原文
 ## 点赞与评论
 
 ## 个人中心与积分（`/#/me`）
+
+## 后端（可选，本地自托管）
+
+```powershell
+npm run server   # 零依赖：node:http + node:sqlite，数据落 server/hall.sqlite
+npm run dev      # 前端另开一个终端
+```
+
+- **在线时**：愿望、帖子/回复、点赞走服务端，`GET /api/wishes`、`POST /api/wishes/:id/claim` 等接口见
+  [docs/backend.md](docs/backend.md)；页面上的条目会标「服务端」，侧边栏显示「后端在线 · 多设备可见」，
+  愿望墙底栏会提示「本机草稿仍保留，离线时可见」。
+- **离线时**：探测失败自动回落本机模式（侧边栏显示「本机模式 · 只在本机」），行为与之前完全一致；
+  后端中途停掉，页面重载后也会如实回落，不会继续假装在线。
+- **身份仍是设备令牌**：`POST /api/identity` 用昵称换令牌存在本机，只证明「同一台设备」——
+  不是账号、没有密码、没有第三方登录，换设备就等于换人。
+- **写入失败不落本地**：页面直接报错让你重试，不会假装保存成功。
+- 展品评论/点赞与积分**仍未上服务端**（继续只在本机）；公网部署、真实账号与真实资金也都没有做。
 
 个人中心 = **本机身份** + **我的内容统计** + **积分账本** + **徽章商店** + 导出/清空本机数据。
 

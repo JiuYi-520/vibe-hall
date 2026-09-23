@@ -35,12 +35,14 @@ export interface Wish {
   claim?: WishClaim
   delivered?: WishDelivery
   cheers: number
+  /** 服务端会告诉「我是否已经按过」；本机模式只看 patch。 */
+  cheered?: boolean
   /**
    * 意向悬赏：只是「愿意请喝咖啡」量级的表达。
    * 展馆不收款、不支付、不托管，也不校验真伪。
    */
   bounty?: WishBounty
-  provenance: { source: 'seed' | 'local'; note?: string }
+  provenance: { source: 'seed' | 'local' | 'server'; note?: string }
 }
 
 export interface WishBounty {

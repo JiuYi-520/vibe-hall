@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import type { ForumAuthor, PostKind } from '../data/forumTypes'
+import type { ForumAuthor, ForumPost, PostKind } from '../data/forumTypes'
 import { FORUM_SORT_LABEL, POST_KIND_META, POST_KIND_ORDER } from '../data/forum'
 import { countMyContributions, filterPosts, forumStats, sortPosts, validateForumDraft } from '../data/forum'
 import { summarize } from '../data/credits'
@@ -10,6 +10,7 @@ import { type CreditBoard, creditBoard as defaultCredits, useCredits } from '../
 import { toggleInList } from '../lib/urlState'
 import { useCopy } from '../lib/hooks'
 import { PostCard } from '../components/PostCard'
+import { ensureServerToken, getServerToken, serverApi, toPost, useHallServer } from '../lib/hallServer'
 
 interface ForumPageProps {
   board?: ForumBoard
@@ -29,6 +30,31 @@ export function ForumPage({ board = defaultBoard, identity = defaultIdentity, cr
   const posts = useForumPosts(board)
   const profile = useIdentity(identity)
   const creditState = useCredits(credits)
+  const server = useHallServer()
+  const [remotePosts, setRemotePosts] = useState<ForumPost[] | null>(null)
+  const [serverToken, setServerToken] = useState(getServerToken())
+  const online = server.status === 'online'
+  const activePosts: ForumPost[] = online && remotePosts ? remotePosts : posts
+
+  const refreshRemote = useCallback(async () => {
+    const result = await serverApi.listPosts(serverToken || undefined)
+    if (result.ok && result.data) setRemotePosts(result.data.posts.map(toPost))
+  }, [serverToken])
+
+  useEffect(() => {
+    if (!online) {
+      setRemotePosts(null)
+      return
+    }
+    void refreshRemote()
+  }, [online, refreshRemote])
+
+  const requireToken = useCallback(async () => {
+    if (serverToken) return serverToken
+    const fresh = await ensureServerToken(profile ?? { nickname: '访客', handle: '' })
+    if (fresh) setServerToken(fresh)
+    return fresh
+  }, [profile, serverToken])
   const [params] = useSearchParams()
   /** 从命令面板跳进来时高亮并滚到那一条。 */
   const focus = params.get('focus')
@@ -45,11 +71,11 @@ export function ForumPage({ board = defaultBoard, identity = defaultIdentity, cr
     : null
 
   const filtered = useMemo(
-    () => sortPosts(filterPosts(posts, { query, kinds }), sort),
-    [posts, query, kinds, sort],
+    () => sortPosts(filterPosts(activePosts, { query, kinds }), sort),
+    [activePosts, query, kinds, sort],
   )
-  const stats = forumStats(posts)
-  const mine = profile ? countMyContributions(posts, profile.handle, profile.nickname) : { posts: 0, replies: 0 }
+  const stats = forumStats(activePosts)
+  const mine = profile ? countMyContributions(activePosts, profile.handle, profile.nickname) : { posts: 0, replies: 0 }
   const localCount = board.getState().patch.created.length
 
   useEffect(() => {
@@ -57,7 +83,7 @@ export function ForumPage({ board = defaultBoard, identity = defaultIdentity, cr
     document.getElementById(`post-${focus}`)?.scrollIntoView({ block: 'center' })
   }, [focus, posts.length])
 
-  const submit = () => {
+  const submit = async () => {
     if (!me) {
       setIssues(['请先设置本机身份'])
       return
@@ -67,10 +93,24 @@ export function ForumPage({ board = defaultBoard, identity = defaultIdentity, cr
       setIssues(found.map((issue) => issue.detail))
       return
     }
-    const result = board.createPost({ ...draft, author: me })
-    if (!result.ok) {
-      setIssues(result.issues.map((issue) => issue.detail))
-      return
+    if (online) {
+      const token = await requireToken()
+      if (!token) {
+        setIssues(['后端在线但拿不到设备令牌，暂时无法发帖'])
+        return
+      }
+      const posted = await serverApi.createPost(token, { title: draft.title, body: draft.body, kind: draft.kind })
+      if (!posted.ok) {
+        setIssues([`后端写入失败：${posted.error}（没有保存，请稍后再试）`])
+        return
+      }
+      await refreshRemote()
+    } else {
+      const result = board.createPost({ ...draft, author: me })
+      if (!result.ok) {
+        setIssues(result.issues.map((issue) => issue.detail))
+        return
+      }
     }
     setIssues([])
     credits.earn('post', draft.title)
@@ -80,11 +120,33 @@ export function ForumPage({ board = defaultBoard, identity = defaultIdentity, cr
     setKinds([])
   }
 
-  const reply = (id: string, body: string) => {
+  const reply = async (id: string, body: string) => {
     if (!me) return FAIL_TEXT['missing-author']
+    if (online) {
+      const token = await requireToken()
+      if (!token) return '后端在线但拿不到设备令牌'
+      const result = await serverApi.replyPost(token, id, body)
+      if (!result.ok) return `后端拒绝：${result.error}`
+      await refreshRemote()
+      credits.earn('reply', result.data?.post.title ?? '帖子')
+      return null
+    }
     const result = board.reply(id, me, body)
     if (result.ok) credits.earn('reply', result.post.title)
     return result.ok ? null : (FAIL_TEXT[result.reason] ?? '回复失败')
+  }
+
+  /** 在线时点赞也走服务端，离线才落本机。 */
+  const toggleLike = async (id: string) => {
+    if (!online) {
+      board.toggleLike(id)
+      return
+    }
+    const token = await requireToken()
+    if (!token) return
+    const result = await serverApi.likePost(token, id)
+    if (!result.ok) return
+    await refreshRemote()
   }
 
   return (
@@ -141,7 +203,7 @@ export function ForumPage({ board = defaultBoard, identity = defaultIdentity, cr
           data-testid="post-form"
           onSubmit={(event) => {
             event.preventDefault()
-            submit()
+            void submit()
           }}
         >
           {me ? (
@@ -247,8 +309,8 @@ export function ForumPage({ board = defaultBoard, identity = defaultIdentity, cr
               post={post}
               me={me}
               focused={focus === post.slug}
-              liked={board.isLiked(post.id)}
-              onToggleLike={(id) => board.toggleLike(id)}
+              liked={post.liked ?? board.isLiked(post.id)}
+              onToggleLike={(id) => void toggleLike(id)}
               onReply={reply}
             />
           ))}

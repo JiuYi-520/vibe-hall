@@ -9,7 +9,7 @@ interface PostCardProps {
   me: ForumAuthor | null
   onToggleLike: (id: string) => void
   liked: boolean
-  onReply: (id: string, body: string) => string | null
+  onReply: (id: string, body: string) => string | null | Promise<string | null>
   /** 从命令面板跳进来时高亮这一条。 */
   focused?: boolean
 }
@@ -20,8 +20,8 @@ export function PostCard({ post, me, onToggleLike, liked, onReply, focused }: Po
   const [error, setError] = useState<string | null>(null)
   const meta = POST_KIND_META[post.kind]
 
-  const submitReply = () => {
-    const failure = onReply(post.id, body)
+  const submitReply = async () => {
+    const failure = await onReply(post.id, body)
     if (failure) {
       setError(failure)
       return
@@ -48,7 +48,7 @@ export function PostCard({ post, me, onToggleLike, liked, onReply, focused }: Po
           {post.author.handle && <em>@{post.author.handle}</em>}
           <time dateTime={post.createdAt}>{formatDate(post.createdAt)}</time>
         </span>
-        {post.source === 'local' && <span className="chip chip--live">本机</span>}
+        {post.source !== 'seed' && <span className="chip chip--live">{post.source === 'server' ? '服务端' : '本机'}</span>}
       </div>
 
       <h3 className="post__title">{post.title}</h3>
@@ -97,7 +97,7 @@ export function PostCard({ post, me, onToggleLike, liked, onReply, focused }: Po
           className="post__form"
           onSubmit={(event) => {
             event.preventDefault()
-            submitReply()
+            void submitReply()
           }}
         >
           <label>

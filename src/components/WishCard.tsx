@@ -12,8 +12,8 @@ interface WishCardProps {
   projects: Project[]
   onToggleCheer: (id: string) => void
   cheered: boolean
-  onClaim: (id: string, maker: { name: string; handle: string }, note: string) => string | null
-  onDeliver: (id: string, delivery: { projectSlug?: string; note?: string }) => string | null
+  onClaim: (id: string, maker: { name: string; handle: string }, note: string) => string | null | Promise<string | null>
+  onDeliver: (id: string, delivery: { projectSlug?: string; note?: string }) => string | null | Promise<string | null>
   /** 本机身份：用来预填接单署名。 */
   me?: LocalProfile | null
   /** 从命令面板跳进来时高亮这一张卡。 */
@@ -42,13 +42,13 @@ export function WishCard({ wish, projects, onToggleCheer, cheered, onClaim, onDe
     setMakerName((current) => current || me?.nickname || '')
     setMakerHandle((current) => current || me?.handle || '')
   }, [me?.nickname, me?.handle])
-  const isLocal = wish.provenance.source === 'local'
+  const origin = wish.provenance.source
   const deliveredProject = wish.delivered?.projectSlug
     ? projects.find((project) => project.slug === wish.delivered?.projectSlug)
     : undefined
 
-  const submitClaim = () => {
-    const failure = onClaim(wish.id, { name: makerName, handle: makerHandle }, plan)
+  const submitClaim = async () => {
+    const failure = await onClaim(wish.id, { name: makerName, handle: makerHandle }, plan)
     if (failure) {
       setError(failure)
       return
@@ -57,8 +57,8 @@ export function WishCard({ wish, projects, onToggleCheer, cheered, onClaim, onDe
     setClaimOpen(false)
   }
 
-  const submitDeliver = () => {
-    const failure = onDeliver(wish.id, { projectSlug, note: deliverNote })
+  const submitDeliver = async () => {
+    const failure = await onDeliver(wish.id, { projectSlug, note: deliverNote })
     if (failure) {
       setError(failure)
       return
@@ -79,7 +79,9 @@ export function WishCard({ wish, projects, onToggleCheer, cheered, onClaim, onDe
         <span className="chip chip--ghost">
           {meta.glyph} {meta.label}
         </span>
-        <span className={`chip chip--${isLocal ? 'live' : 'seed'}`}>{isLocal ? '本机' : '示例'}</span>
+        <span className={`chip chip--${origin === 'seed' ? 'seed' : 'live'}`}>
+          {origin === 'server' ? '服务端' : origin === 'local' ? '本机' : '示例'}
+        </span>
         {wish.bounty && (
           <span className="chip chip--bounty" title="意向悬赏：展馆不收款、不支付、不托管">
             意向悬赏 ¥{wish.bounty.amount}
@@ -164,7 +166,7 @@ export function WishCard({ wish, projects, onToggleCheer, cheered, onClaim, onDe
           className="wish__form"
           onSubmit={(event) => {
             event.preventDefault()
-            submitClaim()
+            void submitClaim()
           }}
         >
           <div className="wish__form-row">
@@ -197,7 +199,7 @@ export function WishCard({ wish, projects, onToggleCheer, cheered, onClaim, onDe
           className="wish__form"
           onSubmit={(event) => {
             event.preventDefault()
-            submitDeliver()
+            void submitDeliver()
           }}
         >
           <label>

@@ -7,6 +7,9 @@
  */
 import { mkdir, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
+import { spawn } from 'node:child_process'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
 import { chromium } from 'playwright-core'
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:4173'
@@ -661,9 +664,101 @@ await calm.waitForTimeout(400)
 check('reduced motion still renders the hall', (await calm.locator('.card').count()) > 0)
 await calm.close()
 
-await browser.close()
+// ---------- 后端端到端：真启动服务、真写库、真回落 ----------
+{
+  const dbFile = path.join(tmpdir(), `vibe-hall-verify-${Date.now()}.sqlite`)
+  const apiBase = 'http://127.0.0.1:8787'
+  const child = spawn(process.execPath, ['server/app.mjs'], {
+    env: { ...process.env, PORT: '8787', HALL_DB: dbFile, HALL_ORIGIN: '*' },
+    stdio: 'ignore',
+  })
+  let stopped = false
+  const stopServer = async () => {
+    if (stopped) return
+    stopped = true
+    await new Promise((resolve) => {
+      child.once('exit', () => resolve())
+      child.kill()
+      setTimeout(resolve, 2000)
+    })
+  }
+  let serverReady = false
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    try {
+      const response = await fetch(`${apiBase}/api/health`)
+      if (response.ok) {
+        serverReady = true
+        break
+      }
+    } catch {
+      // 还没起来
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250))
+  }
+
+  try {
+    const health = serverReady ? await (await fetch(`${apiBase}/api/health`)).json() : null
+    check('后端能启动并通过健康检查', serverReady && health?.ok === true && health?.storage === 'sqlite', JSON.stringify(health?.stats ?? null))
+
+    const backendPage = await browser.newPage({ viewport: { width: 1400, height: 1000 }, colorScheme: 'dark' })
+    // browser.newPage() 会开新的浏览器上下文：先在这台「设备」上设置本机身份
+    await backendPage.goto(`${BASE}/#/me`, { waitUntil: 'networkidle' })
+    await backendPage.getByLabel('昵称').fill('后端验证机')
+    await backendPage.getByLabel('账号').fill('verify-bot')
+    await backendPage.getByRole('button', { name: '保存身份' }).click()
+    await backendPage.waitForTimeout(400)
+    await backendPage.goto(`${BASE}/#/wishes`, { waitUntil: 'networkidle' })
+    await backendPage.waitForTimeout(1200)
+    const mode = await backendPage.locator('.site-sidebar__mode').innerText()
+    check('前端识别到后端在线', mode.includes('后端在线'), mode)
+
+    const serverWishTitle = '后端验证：想要一个会提醒我喝水的小工具'
+    await backendPage.getByRole('button', { name: /贴一个新愿望/ }).click()
+    const form = backendPage.getByTestId('wish-form')
+    await form.getByLabel('愿望标题').fill(serverWishTitle)
+    await form.getByLabel('愿望描述').fill('每小时提醒一次，可以设置免打扰时段，记一下当天喝了多少。')
+    await form.getByRole('button', { name: '贴到愿望墙' }).click()
+    await backendPage.waitForTimeout(1200)
+
+    const apiWishes = await (await fetch(`${apiBase}/api/wishes`)).json()
+    check(
+      '界面发的愿望真的写进了后端 SQLite',
+      Array.isArray(apiWishes.wishes) && apiWishes.wishes.some((wish) => wish.title === serverWishTitle),
+      `${apiWishes.wishes?.length ?? 0} 条`,
+    )
+    check(
+      '列表把这条标成服务端来源',
+      (await backendPage.locator('.wish', { hasText: serverWishTitle }).locator('.chip', { hasText: '服务端' }).count()) > 0,
+    )
+    await backendPage.screenshot({ path: `${OUT}/21-server-mode.png`, fullPage: false })
+
+    // 另开一个「设备」用同一后端发帖，验证多设备可见
+    const otherDevice = await browser.newPage({ viewport: { width: 900, height: 900 } })
+    await otherDevice.goto(`${BASE}/#/wishes`, { waitUntil: 'networkidle' })
+    await otherDevice.waitForTimeout(1200)
+    check(
+      '另一台设备能看到同一条愿望',
+      (await otherDevice.locator('.wish', { hasText: serverWishTitle }).count()) === 1,
+      serverWishTitle,
+    )
+    await otherDevice.close()
+
+    // 停掉后端：页面应如实回落本机模式，而不是继续假装在线
+    await stopServer()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    await backendPage.reload({ waitUntil: 'networkidle' })
+    await backendPage.waitForTimeout(2500)
+    const offlineMode = await backendPage.locator('.site-sidebar__mode').innerText()
+    check('后端停止后回落本机模式', offlineMode.includes('本机模式'), offlineMode)
+    await backendPage.close()
+  } finally {
+    await stopServer()
+  }
+}
 
 // ---------- ui-verification 探针：目标尺寸 / 焦点遍历 / 视口压力 / 网络失败 ----------
+await browser.close()
+
 {
   const probeBrowser = await chromium.launch({ channel: 'msedge', headless: true })
   const probe = await probeBrowser.newPage({ viewport: { width: 1280, height: 900 }, colorScheme: 'dark' })
@@ -814,11 +909,20 @@ await browser.close()
 
 const failures = results.filter((item) => !item.passed)
 console.log(`\n${results.length - failures.length}/${results.length} runtime checks passed`)
-if (consoleErrors.length) {
-  console.log(`\nConsole errors (${consoleErrors.length}):`)
-  for (const error of [...new Set(consoleErrors)].slice(0, 10)) console.log(`  ! ${error}`)
+/**
+ * 故意制造的离线探测（后端未启动时前端会探一次 /api/health）必然产生
+ * net::ERR_CONNECTION_REFUSED；这是被测行为本身，不算页面缺陷，单独列出。
+ */
+const expectedOffline = consoleErrors.filter((error) => error.includes('ERR_CONNECTION_REFUSED'))
+const realErrors = consoleErrors.filter((error) => !error.includes('ERR_CONNECTION_REFUSED'))
+if (expectedOffline.length) {
+  console.log(`\n预期内的离线探测失败（后端未启动时前端探测 /api/health）：${expectedOffline.length} 次`)
+}
+if (realErrors.length) {
+  console.log(`\nConsole errors (${realErrors.length}):`)
+  for (const error of [...new Set(realErrors)].slice(0, 10)) console.log(`  ! ${error}`)
 } else {
   console.log('Console errors: none')
 }
 
-if (failures.length || consoleErrors.length) process.exitCode = 1
+if (failures.length || realErrors.length) process.exitCode = 1

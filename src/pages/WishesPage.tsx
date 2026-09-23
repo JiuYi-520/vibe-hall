@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import type { CategoryId, Project } from '../data/types'
 import type { Wish } from '../data/wishTypes'
@@ -11,6 +11,7 @@ import { type WishBoard, useWishes, wishBoard as defaultBoard } from '../lib/wis
 import { type IdentityBoard, identityBoard as defaultIdentity, useIdentity } from '../lib/identityStore'
 import { type CreditBoard, creditBoard as defaultCredits, useCredits } from '../lib/creditBoard'
 import { WishCard } from '../components/WishCard'
+import { API_BASE, ensureServerToken, getServerToken, serverApi, toWish, useHallServer } from '../lib/hallServer'
 
 interface WishesPageProps {
   board?: WishBoard
@@ -41,6 +42,32 @@ export function WishesPage({
   const wishes = useWishes(board)
   const profile = useIdentity(identity)
   const creditState = useCredits(credits)
+  const server = useHallServer()
+  const [remoteWishes, setRemoteWishes] = useState<Wish[] | null>(null)
+  const [serverToken, setServerToken] = useState(getServerToken())
+  const online = server.status === 'online'
+  const activeWishes: Wish[] = online && remoteWishes ? remoteWishes : wishes
+
+  const refreshRemote = useCallback(async () => {
+    const result = await serverApi.listWishes(serverToken || undefined)
+    if (result.ok && result.data) setRemoteWishes(result.data.wishes.map(toWish))
+  }, [serverToken])
+
+  useEffect(() => {
+    if (!online) {
+      setRemoteWishes(null)
+      return
+    }
+    void refreshRemote()
+  }, [online, refreshRemote])
+
+  /** 在线时才需要令牌：它是「这台设备」的凭据，不是账号。 */
+  const requireToken = useCallback(async () => {
+    if (serverToken) return serverToken
+    const fresh = await ensureServerToken(profile ?? { nickname: '访客', handle: '' })
+    if (fresh) setServerToken(fresh)
+    return fresh
+  }, [profile, serverToken])
   const [params] = useSearchParams()
   /** 从命令面板跳进来时高亮并滚到那一条。 */
   const focus = params.get('focus')
@@ -60,8 +87,8 @@ export function WishesPage({
   const [toast, copy] = useCopy()
 
   const filtered = useMemo(
-    () => sortWishes(filterWishes(wishes, { query }), 'open-first'),
-    [wishes, query],
+    () => sortWishes(filterWishes(activeWishes, { query }), 'open-first'),
+    [activeWishes, query],
   )
   const localCount = board.getState().patch.created.length
 
@@ -79,16 +106,37 @@ export function WishesPage({
     }))
   }, [profile])
 
-  const submitDraft = () => {
+  const submitDraft = async () => {
     const found = validateWishDraft(draft)
     if (found.length > 0) {
       setIssues(found.map((issue) => issue.detail))
       return
     }
-    const result = board.createWish(draft)
-    if (!result.ok) {
-      setIssues(result.issues.map((issue) => issue.detail))
-      return
+    if (online) {
+      const token = await requireToken()
+      if (!token) {
+        setIssues(['后端在线但拿不到设备令牌，暂时无法写入'])
+        return
+      }
+      const posted = await serverApi.createWish(token, {
+        title: draft.title,
+        brief: draft.brief,
+        category: draft.category,
+        tags: draft.tags.split(/[,，]/).map((tag) => tag.trim()).filter(Boolean),
+        bountyAmount: draft.bountyAmount,
+        bountyNote: draft.bountyNote,
+      })
+      if (!posted.ok) {
+        setIssues([`后端写入失败：${posted.error}（没有保存，请稍后再试）`])
+        return
+      }
+      await refreshRemote()
+    } else {
+      const result = board.createWish(draft)
+      if (!result.ok) {
+        setIssues(result.issues.map((issue) => issue.detail))
+        return
+      }
     }
     setIssues([])
     credits.earn('wish', draft.title)
@@ -106,18 +154,49 @@ export function WishesPage({
     setQuery('')
   }
 
-  const claim = (id: string, maker: { name: string; handle: string }, note: string) => {
+  const claim = async (id: string, maker: { name: string; handle: string }, note: string) => {
+    if (online) {
+      const token = await requireToken()
+      if (!token) return '后端在线但拿不到设备令牌'
+      const result = await serverApi.claimWish(token, id, note)
+      if (!result.ok) return FAIL_TEXT[result.error ?? ''] ?? `后端拒绝：${result.error}`
+      await refreshRemote()
+      credits.earn('claim', result.data?.wish.title ?? '愿望')
+      return null
+    }
     const result = board.claim(id, maker, note)
     if (result.ok) credits.earn('claim', result.wish.title)
     return result.ok ? null : (FAIL_TEXT[result.reason] ?? '接单失败')
   }
 
-  const deliver = (id: string, delivery: { projectSlug?: string; note?: string }) => {
+  const deliver = async (id: string, delivery: { projectSlug?: string; note?: string }) => {
+    if (online) {
+      const token = await requireToken()
+      if (!token) return '后端在线但拿不到设备令牌'
+      const result = await serverApi.deliverWish(token, id, delivery.projectSlug ?? '', delivery.note ?? '')
+      if (!result.ok) return FAIL_TEXT[result.error ?? ''] ?? `后端拒绝：${result.error}`
+      await refreshRemote()
+      credits.earn('deliver', result.data?.wish.title ?? '愿望')
+      return null
+    }
     const wish = wishes.find((item) => item.id === id)
     const actor = wish?.claim?.maker.handle ?? ''
     const result = board.deliver(id, actor, delivery)
     if (result.ok) credits.earn('deliver', result.wish.title)
     return result.ok ? null : (FAIL_TEXT[result.reason] ?? '交付失败')
+  }
+
+  /** 在线时「我也想要」也走服务端，离线才落本机。 */
+  const toggleCheer = async (id: string) => {
+    if (!online) {
+      board.toggleCheer(id)
+      return
+    }
+    const token = await requireToken()
+    if (!token) return
+    const result = await serverApi.cheerWish(token, id)
+    if (!result.ok) return
+    await refreshRemote()
   }
 
   return (
@@ -143,7 +222,7 @@ export function WishesPage({
           data-testid="wish-form"
           onSubmit={(event) => {
             event.preventDefault()
-            submitDraft()
+            void submitDraft()
           }}
         >
           <div className="wishes__form-row">
@@ -226,8 +305,8 @@ export function WishesPage({
               key={wish.id}
               wish={wish}
               projects={projects}
-              onToggleCheer={(id) => board.toggleCheer(id)}
-              cheered={Boolean(board.getState().patch.cheered?.[wish.id])}
+              onToggleCheer={(id) => void toggleCheer(id)}
+              cheered={wish.cheered ?? Boolean(board.getState().patch.cheered?.[wish.id])}
               onClaim={claim}
               onDeliver={deliver}
               me={profile}
@@ -256,7 +335,15 @@ export function WishesPage({
 
       <p className="wishes__bar" aria-live="polite">
         <strong data-testid="wish-count">{filtered.length}</strong>
-        <span>/ {wishes.length} 条愿望 · 单机版，只有本机能看见</span>
+        <span>
+          / {activeWishes.length} 条愿望 ·{' '}
+          {online ? `后端在线（${API_BASE}，多设备可见；本机草稿仍保留，离线时可见）` : '单机版，只有本机能看见'}
+        </span>
+        {online && (
+          <button type="button" className="link-btn" onClick={() => void refreshRemote()}>
+            刷新
+          </button>
+        )}
         <span>· 积分 {summarize(creditState.entries).balance}</span>
         <button type="button" className="link-btn" onClick={() => setFormOpen((open) => !open)}>
           贴一个新愿望

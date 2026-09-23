@@ -243,6 +243,31 @@ pre {
   margin-top: auto;
 }
 
+.site-sidebar__mode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 var(--space-3);
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--line-strong);
+  background: var(--panel-hi);
+  color: var(--ink-mute);
+  font-size: var(--step--2);
+}
+
+.site-sidebar__mode--online {
+  border-style: solid;
+  border-color: hsl(154 60% 50% / 0.45);
+  background: hsl(154 60% 50% / 0.1);
+  color: hsl(154 70% 66%);
+}
+
+.site-sidebar__mode--checking {
+  color: var(--ink-faint);
+}
+
 .site-sidebar__me-card {
   display: flex;
   align-items: center;

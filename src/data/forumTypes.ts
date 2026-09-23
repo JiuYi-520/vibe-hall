@@ -11,7 +11,7 @@ export interface ForumReply {
   author: ForumAuthor
   body: string
   createdAt: string
-  source: 'seed' | 'local'
+  source: 'seed' | 'local' | 'server'
 }
 
 export interface ForumPost {
@@ -24,7 +24,9 @@ export interface ForumPost {
   createdAt: string
   replies: ForumReply[]
   likes: number
-  source: 'seed' | 'local'
+  /** 服务端会告诉「我是否已经赞过」；本机模式只看 patch。 */
+  liked?: boolean
+  source: 'seed' | 'local' | 'server'
 }
 
 export interface ForumDraft {
