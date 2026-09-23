@@ -211,3 +211,39 @@ describe('首页布局默认值', () => {
     expect(document.querySelectorAll('.card--grid').length).toBeGreaterThan(0)
   })
 })
+
+describe('首页渐进渲染', () => {
+  it('默认只渲染第一批，点一次多一批，到底后按钮消失', async () => {
+    const user = userEvent.setup()
+    const total = seedProjects.length
+    renderHome()
+
+    expect(document.querySelectorAll('.grid .card').length).toBe(Math.min(12, total))
+    await user.click(screen.getByRole('button', { name: /再看 \d+ 条/ }))
+    expect(document.querySelectorAll('.grid .card').length).toBe(Math.min(24, total))
+    expect(screen.queryByRole('button', { name: /再看 \d+ 条/ })).toBeNull()
+  })
+
+  it('改筛选后回到第一批', async () => {
+    const user = userEvent.setup()
+    const total = seedProjects.length
+    renderHome()
+    await user.click(screen.getByRole('button', { name: /再看 \d+ 条/ }))
+    expect(document.querySelectorAll('.grid .card').length).toBe(Math.min(24, total))
+
+    await user.type(screen.getByRole('searchbox', { name: /搜索/ }), '潮汐')
+    expect(document.querySelectorAll('.grid .card').length).toBe(1)
+  })
+})
+
+describe('长页导航', () => {
+  it('提供回到顶部按钮，点击后滚回顶部', async () => {
+    const user = userEvent.setup()
+    const scrollSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    renderHome()
+
+    await user.click(screen.getByTestId('back-to-top'))
+    expect(scrollSpy).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }))
+    scrollSpy.mockRestore()
+  })
+})

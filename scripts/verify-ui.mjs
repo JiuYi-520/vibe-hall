@@ -73,6 +73,38 @@ check(
   rowsDefault.length === 2 && Math.abs(rowsDefault[0].top - rowsDefault[1].top) > 20 && Math.abs(rowsDefault[0].width - rowsDefault[1].width) <= 2,
   JSON.stringify(rowsDefault),
 )
+
+// 渐进渲染：先渲染一批，点一次追加一批
+const renderedFirst = await page.locator('.grid .card').count()
+const loadMore = page.getByRole('button', { name: /再看 \d+ 条/ })
+check('首屏只渲染一批案例', renderedFirst > 0 && renderedFirst <= 12, `${renderedFirst} 张卡`)
+if ((await loadMore.count()) > 0) {
+  await loadMore.click()
+  await page.waitForTimeout(400)
+  const renderedAfter = await page.locator('.grid .card').count()
+  check('点「再看」后追加一批', renderedAfter > renderedFirst, `${renderedFirst} → ${renderedAfter}`)
+}
+
+// 回到顶部：滚动后出现，点击后回到 0
+await page.evaluate(() => window.scrollTo({ top: 2000 }))
+await page.waitForTimeout(500)
+const toTopVisible = await page.locator('.to-top.is-visible').count()
+check('长页滚动后出现「回到顶部」', toTopVisible === 1, `${toTopVisible} 个可见`)
+await page.getByTestId('back-to-top').click()
+await page.waitForTimeout(900)
+const scrollY = await page.evaluate(() => Math.round(window.scrollY))
+check('点「回到顶部」后滚回顶部', scrollY <= 4, `scrollY=${scrollY}`)
+
+// 工具栏吸顶：滚动后仍贴在顶栏下方
+await page.evaluate(() => window.scrollTo({ top: 1200 }))
+await page.waitForTimeout(500)
+const sticky = await page.evaluate(() => {
+  const toolbar = document.querySelector('.toolbar')?.getBoundingClientRect()
+  const header = document.querySelector('.site-header')?.getBoundingClientRect()
+  return { toolbarTop: Math.round(toolbar?.top ?? -1), headerBottom: Math.round(header?.bottom ?? 0) }
+})
+check('滚动后筛选工具栏吸顶在顶栏下方', Math.abs(sticky.toolbarTop - sticky.headerBottom) <= 6, JSON.stringify(sticky))
+await page.evaluate(() => window.scrollTo({ top: 0 }))
 await page.evaluate(() => window.scrollTo({ top: 0 }))
 await page.waitForTimeout(300)
 
@@ -591,32 +623,48 @@ await browser.close()
   probe.on('response', (response) => {
     if (response.status() >= 400) failedRequests.push(`${response.status()} ${response.url()}`)
   })
-  await probe.goto(`${BASE}/#/`, { waitUntil: 'networkidle' })
+  /** 便宜的三条探针按 skill 要求跑每个路由，而不是只看首页。 */
+  const PROBE_ROUTES = ['/', '/stars', '/wishes', '/forum', '/me', '/p/neon-kanban']
+  const measureTargets = () =>
+    probe.evaluate(() => {
+      const nodes = [...document.querySelectorAll('a[href], button, input, select, textarea, [role="button"]')]
+      const measured = nodes
+        .filter((node) => {
+          const rect = node.getBoundingClientRect()
+          return rect.width > 0 && rect.height > 0 && node.getClientRects().length > 0
+        })
+        .map((node) => {
+          const rect = node.getBoundingClientRect()
+          return {
+            label: (node.getAttribute('aria-label') || node.textContent || node.tagName).trim().slice(0, 24),
+            w: Math.round(rect.width),
+            h: Math.round(rect.height),
+          }
+        })
+      return {
+        total: measured.length,
+        under24: measured.filter((item) => item.w < 24 || item.h < 24),
+        under44: measured.filter((item) => item.w < 44 || item.h < 44),
+      }
+    })
 
-  // 目标尺寸：可见交互元素的边界框（不含伪元素撑开的额外命中区，这点在报告里注明）
-  const targets = await probe.evaluate(() => {
-    const nodes = [...document.querySelectorAll('a[href], button, input, select, textarea, [role="button"]')]
-    const measured = nodes
-      .filter((node) => {
-        const rect = node.getBoundingClientRect()
-        return rect.width > 0 && rect.height > 0 && node.getClientRects().length > 0
-      })
-      .map((node) => {
-        const rect = node.getBoundingClientRect()
-        return {
-          label: (node.getAttribute('aria-label') || node.textContent || node.tagName).trim().slice(0, 24),
-          w: Math.round(rect.width),
-          h: Math.round(rect.height),
-        }
-      })
-    return { total: measured.length, under24: measured.filter((item) => item.w < 24 || item.h < 24), under44: measured.filter((item) => item.w < 44 || item.h < 44) }
-  })
-  await writeFile('screenshots/probe-target-size.json', `${JSON.stringify(targets, null, 2)}\n`, 'utf8')
+  const sizeByRoute = []
+  for (const route of PROBE_ROUTES) {
+    await probe.setViewportSize({ width: 1280, height: 900 })
+    await probe.goto(`${BASE}/#${route}`, { waitUntil: 'networkidle' })
+    await probe.waitForTimeout(250)
+    sizeByRoute.push({ route, ...(await measureTargets()) })
+  }
+  await writeFile('screenshots/probe-target-size.json', `${JSON.stringify(sizeByRoute, null, 2)}\n`, 'utf8')
+  const smallTargets = sizeByRoute.flatMap((entry) => entry.under24.map((item) => `${entry.route} ${item.label} ${item.w}x${item.h}`))
+  const targetTotal = sizeByRoute.reduce((sum, entry) => sum + entry.total, 0)
   check(
-    '目标尺寸探针：可见交互元素都不小于 24x24',
-    targets.under24.length === 0,
-    `${targets.total} 个元素，<24px 的 ${targets.under24.length} 个${targets.under24.length ? ': ' + JSON.stringify(targets.under24.slice(0, 5)) : ''}`,
+    '目标尺寸探针：所有路由的可见交互元素都不小于 24x24',
+    smallTargets.length === 0,
+    smallTargets.length ? smallTargets.slice(0, 5).join(' | ') : `${PROBE_ROUTES.length} 个路由共 ${targetTotal} 个元素，0 处不合格`,
   )
+
+  await probe.goto(`${BASE}/#/`, { waitUntil: 'networkidle' })
 
   // 焦点遍历：Tab 走 12 步，每步都要有可见焦点环且停在视口内
   const walk = []
@@ -644,11 +692,10 @@ await browser.close()
 
   // 视口压力：两个宽度都不能出现横向溢出
   const stress = []
-  for (const [route, width] of [
-    ['/', 360],
-    ['/', 1280],
-    ['/forum', 1280],
-  ]) {
+  for (const [route, width] of PROBE_ROUTES.flatMap((route) => [
+    [route, 360],
+    [route, 1280],
+  ])) {
     await probe.setViewportSize({ width, height: 900 })
     await probe.goto(`${BASE}/#${route}`, { waitUntil: 'networkidle' })
     stress.push(
@@ -698,11 +745,21 @@ await browser.close()
   }
   await writeFile('screenshots/probe-viewport-stress.json', `${JSON.stringify(stress, null, 2)}\n`, 'utf8')
   const overflow = stress.filter((item) => item.scrollWidth > item.clientWidth + 1)
-  check('视口压力探针：360/1280 无横向溢出', overflow.length === 0, JSON.stringify(stress))
+  check(
+    '视口压力探针：所有路由 360/1280 无横向溢出',
+    overflow.length === 0,
+    overflow.length
+      ? JSON.stringify(overflow.slice(0, 3))
+      : `${stress.length} 次测量（${PROBE_ROUTES.length} 个路由 × 360/1280）全部无溢出`,
+  )
 
   // 网络：本次探针期间不应有失败请求
   await writeFile('screenshots/probe-network.json', `${JSON.stringify(failedRequests, null, 2)}\n`, 'utf8')
-  check('网络探针：没有失败请求', failedRequests.length === 0, failedRequests.length ? failedRequests.join(' | ') : '0 条 >=400')
+  check(
+    '网络探针：所有路由无失败请求',
+    failedRequests.length === 0,
+    failedRequests.length ? [...new Set(failedRequests)].slice(0, 5).join(' | ') : '0 条 >=400',
+  )
 
   await probeBrowser.close()
 }

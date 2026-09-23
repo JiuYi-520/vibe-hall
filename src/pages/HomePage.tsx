@@ -1,11 +1,11 @@
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { Filters, Project } from '../data/types'
 import { buildFacets, computeStats, filterProjects, pickFeatured, rankProjects, sortProjects } from '../data/queries'
 import { loadProjects } from '../data/loadProjects'
 import { activeFilterCount, parseGalleryState, serializeGalleryState, SORT_KEYS, type GalleryState } from '../lib/urlState'
-import { usePrefersReducedMotion } from '../lib/hooks'
+import { usePrefersReducedMotion, useScrollProgress } from '../lib/hooks'
 import { formatCompact } from '../lib/format'
 import { FilterBar, SORT_LABEL } from '../components/FilterBar'
 import { ProjectCard } from '../components/ProjectCard'
@@ -21,6 +21,8 @@ interface HomePageProps {
 }
 
 const bundle = loadProjects()
+/** 一行一个案例后页面很长：先渲染这一批，其余按需追加。 */
+const PAGE_SIZE = 12
 
 export function HomePage({
   projects = bundle.projects,
@@ -29,6 +31,8 @@ export function HomePage({
 }: HomePageProps) {
   const [params, setParams] = useSearchParams()
   const interactionState = useInteractions()
+  const scrollProgress = useScrollProgress()
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const navigate = useNavigate()
   const searchRef = useRef<HTMLInputElement>(null)
   const reduced = usePrefersReducedMotion()
@@ -63,6 +67,13 @@ export function HomePage({
   const stats = useMemo(() => computeStats(displayProjects), [displayProjects])
   const featured = useMemo(() => pickFeatured(ordered.filter((project) => project.featured), 4), [ordered])
   const activeCount = activeFilterCount(state)
+  const shown = useMemo(() => ordered.slice(0, visibleCount), [ordered, visibleCount])
+  const remaining = Math.max(0, ordered.length - shown.length)
+
+  // 任何筛选/排序/版式变化都回到第一批，避免"筛完还停在第 5 页"。
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE)
+  }, [state.q, state.cats, state.stack, state.statuses, state.featured, state.sort, state.view])
 
   /** 用原生 View Transitions 做筛选变化的 FLIP 过渡；不支持时直接更新。 */
   const applyState = (next: GalleryState) => {
@@ -225,18 +236,34 @@ export function HomePage({
         )}
 
         {ordered.length > 0 ? (
-          <div className={`grid grid--${state.view}`}>
-            {ordered.map((project, index) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                index={index}
-                view={state.view}
-                highlight={state.q}
-                commentCount={commentCounts.get(project.slug) ?? 0}
-              />
-            ))}
-          </div>
+          <>
+            <div className={`grid grid--${state.view}`}>
+              {shown.map((project, index) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  index={index}
+                  view={state.view}
+                  highlight={state.q}
+                  commentCount={commentCounts.get(project.slug) ?? 0}
+                />
+              ))}
+            </div>
+            {remaining > 0 && (
+              <div className="load-more">
+                <button
+                  type="button"
+                  className="btn btn--ghost"
+                  onClick={() => setVisibleCount((current) => current + PAGE_SIZE)}
+                >
+                  再看 {Math.min(PAGE_SIZE, remaining)} 条
+                </button>
+                <span className="load-more__hint">
+                  已显示 {shown.length} / {ordered.length}
+                </span>
+              </div>
+            )}
+          </>
         ) : (
           <div className="empty" data-testid="empty-state">
             <p className="empty__glyph" aria-hidden="true">
@@ -267,6 +294,17 @@ export function HomePage({
           </div>
         </div>
       </section>
+
+      <button
+        type="button"
+        className={`to-top ${scrollProgress > 0.15 ? 'is-visible' : ''}`}
+        data-testid="back-to-top"
+        aria-hidden={scrollProgress <= 0.15}
+        tabIndex={scrollProgress > 0.15 ? 0 : -1}
+        onClick={() => window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' })}
+      >
+        ↑ 回到顶部
+      </button>
     </div>
   )
 }
