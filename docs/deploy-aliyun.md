@@ -72,6 +72,8 @@ Environment=HOST=0.0.0.0
 Environment=PORT=8787
 Environment=STATIC_ROOT=dist
 Environment=HALL_DB=/srv/vibe-hall/hall.sqlite
+# 登录 Cookie 与跨域请求只允许站点自己的来源；换域名后同步修改
+Environment=HALL_ORIGIN=http://<服务器公网IP>:8787
 ExecStart=/usr/bin/node server/app.mjs
 Restart=always
 RestartSec=3
