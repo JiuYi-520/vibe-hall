@@ -18,7 +18,12 @@ npm run dev         # 另开一个终端启动前端：http://localhost:5173
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | GET | `/api/health` | 健康检查，返回存储类型与各表计数 |
-| POST | `/api/identity` | 用昵称/账号换一个**设备令牌**（不是账号） |
+| POST | `/api/auth/register` | 注册自建账号并设置 HttpOnly 会话 |
+| POST | `/api/auth/login` | 登录自建账号并设置 HttpOnly 会话 |
+| POST | `/api/auth/logout` | 撤销当前会话 |
+| GET | `/api/auth/me` | 读取当前登录账号 |
+| PATCH | `/api/profile` | 更新昵称、账号、简介和头像色 |
+| POST | `/api/identity` | 旧版兼容：用昵称/账号换一个设备令牌 |
 | GET | `/api/wishes` | 愿望列表（带 `cheered` 表示"我是否按过"） |
 | POST | `/api/wishes` | 发愿望（需令牌） |
 | POST | `/api/wishes/:id/cheer` | 「我也想要」按设备切换 |
@@ -31,11 +36,12 @@ npm run dev         # 另开一个终端启动前端：http://localhost:5173
 
 错误统一为 `{ error: { code, message } }`，状态码：400 参数、401 未认证、403 无权、404 不存在、409 冲突、413 请求体过大、500 内部错误。
 
-## 身份：设备令牌，不是账号
+## 身份：自建账号与兼容令牌
 
-- `POST /api/identity` 用昵称换一个随机令牌，存在浏览器本机（`vibe-hall:token`）；之后写操作带 `Authorization: Bearer <token>`。
-- 令牌只证明**同一台设备**：没有密码、没有邮箱验证、没有第三方登录。**换设备就等于换人**，也无法找回旧令牌。
-- 服务端按令牌判定"作者/接单人/点赞人"，所以它比纯本机模式强在：**别人改不了你的记录**，且**多设备/多人能看到同一份数据**。
+- `POST /api/auth/register` 或 `/api/auth/login` 设置 `vh_session` HttpOnly Cookie；密码只存 scrypt 摘要，服务端保存会话摘要并支持退出撤销。
+- 登录资料包含昵称、账号、简介和头像色，`PATCH /api/profile` 更新后可在不同设备读取。
+- 旧版 `POST /api/identity` 仍返回设备令牌，便于离线兼容；新界面优先使用账号会话。
+- 服务端按账号/令牌判定作者、接单人和点赞人，因此愿望与论坛可以多人共享。
 
 ## 一致性边界（重要）
 
@@ -49,7 +55,7 @@ npm run dev         # 另开一个终端启动前端：http://localhost:5173
 
 ## 仍未做
 
-- **公网部署**：现在只在 127.0.0.1 提供，没有域名、TLS、反向代理、备份与运维。
-- **真实账号**：OAuth/密码体系、找回、封禁、风控都没做。
+- **公网部署**：域名、TLS、反向代理、备份与运维仍需按部署清单配置。
+- **账号增强**：邮箱验证、密码找回、封禁、风控和第三方 OAuth/OIDC 都没做。
 - **真实资金**：与本仓库其他部分一致，未做；见 [money-and-auth.md](./money-and-auth.md)。
 - 展品评论/点赞与积分未上服务端；没有实时推送（靠手动刷新或重新进入页面）。

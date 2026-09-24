@@ -2426,6 +2426,84 @@ pre {
   color: var(--ink-soft);
 }
 
+.me__account {
+  margin-top: var(--space-5);
+  padding: var(--space-5);
+  border: 1px solid hsl(212 92% 62% / 0.34);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(140deg, hsl(212 92% 62% / 0.1), transparent 65%), var(--panel);
+  backdrop-filter: var(--glass);
+}
+
+.me__account-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.me__account h2 {
+  font-size: var(--step-1);
+}
+
+.me__account-head p {
+  margin-top: 0.35rem;
+  max-width: 62ch;
+  color: var(--ink-mute);
+  font-size: var(--step--1);
+}
+
+.me__auth-tabs {
+  margin-top: var(--space-4);
+}
+
+.me__auth-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: var(--space-3);
+  align-items: end;
+  margin-top: var(--space-3);
+}
+
+.me__auth-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  color: var(--ink-mute);
+  font-size: var(--step--1);
+}
+
+.me__auth-form input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  padding: 0.6rem 0.75rem;
+  outline: none;
+  font-family: inherit;
+}
+
+.me__auth-form input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px hsl(212 92% 62% / 0.14);
+}
+
+.me__auth-form .me__issues {
+  grid-column: 1 / -1;
+}
+
+.me__account-status {
+  margin-top: var(--space-3);
+  color: var(--ink-soft);
+  font-size: var(--step--1);
+}
+
+.me__account-status--warn {
+  color: var(--warn);
+}
+
 .forum__notice {
   margin-top: var(--space-4);
   padding: var(--space-3) var(--space-4);

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { type FormEvent, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EMPTY_PROFILE, type LocalProfile } from '../data/identity'
 import { countMyContributions } from '../data/forum'
@@ -9,6 +9,7 @@ import { type InteractionBoard, interactionBoard as defaultInteractions, useInte
 import { type CreditBoard, creditBoard as defaultCredits, useCredits } from '../lib/creditBoard'
 import { BADGES, CREDIT_RULES, CREDITS_DISCLAIMER, summarize } from '../data/credits'
 import { useCopy } from '../lib/hooks'
+import { authStore, useAuth } from '../lib/authStore'
 
 interface MePageProps {
   identity?: IdentityBoard
@@ -28,6 +29,7 @@ export function MePage({
   credits = defaultCredits,
 }: MePageProps) {
   const profile = useIdentity(identity)
+  const auth = useAuth()
   const forumPosts = useForumPosts(forum)
   const interactionState = useInteractions(interactions)
   const creditState = useCredits(credits)
@@ -37,6 +39,10 @@ export function MePage({
   const [editing, setEditing] = useState(false)
   const [issues, setIssues] = useState<string[]>([])
   const [toast, copy] = useCopy()
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
+  const [authDraft, setAuthDraft] = useState({ handle: '', password: '', nickname: '', bio: '' })
+  const [authIssues, setAuthIssues] = useState<string[]>([])
+  const [authBusy, setAuthBusy] = useState(false)
 
   const showForm = !profile || editing
   /** 账号或昵称任一匹配即算「我的」——只填昵称的人也要有统计。 */
@@ -73,7 +79,14 @@ export function MePage({
     setIssues([])
   }
 
-  const save = () => {
+  const save = async () => {
+    if (auth.status === 'authenticated') {
+      const remote = await authStore.updateProfile({ nickname: draft.nickname, handle: draft.handle, bio: draft.bio, hue: draft.hue })
+      if (!remote.ok) {
+        setIssues([remote.error ?? '服务器资料保存失败'])
+        return
+      }
+    }
     const result = identity.save(draft)
     if (!result.ok) {
       setIssues(result.issues.map((issue) => issue.detail))
@@ -83,14 +96,122 @@ export function MePage({
     setEditing(false)
   }
 
+  const submitAuth = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setAuthBusy(true)
+    setAuthIssues([])
+    const result =
+      authMode === 'login'
+        ? await authStore.login({ handle: authDraft.handle, password: authDraft.password })
+        : await authStore.register({ handle: authDraft.handle, password: authDraft.password, nickname: authDraft.nickname, bio: authDraft.bio })
+    setAuthBusy(false)
+    if (!result.ok) setAuthIssues([result.error ?? (authMode === 'login' ? '登录失败' : '注册失败')])
+    else setAuthDraft((current) => ({ ...current, password: '' }))
+  }
+
   return (
     <div className="section me">
       <header className="me__head">
         <h1>我的主页</h1>
-        <p className="me__lead">
-          本机身份不是账号：<strong>没有密码、没有验证、也不会上传</strong>。它只是给愿望、接单和发帖一个署名。
-        </p>
+        {auth.user ? (
+          <p className="me__lead">
+            这是你的自建账号资料。昵称、账号、简介和头像色会同步到服务器；本机数据仍可单独导出。
+          </p>
+        ) : (
+          <p className="me__lead">
+            本机身份不是账号：<strong>没有密码、没有验证、也不会上传</strong>。登录后可把它升级为跨设备账号。
+          </p>
+        )}
       </header>
+
+      <section className="me__account" data-testid="account-section">
+        <div className="me__account-head">
+          <div>
+            <h2>账号与个人信息</h2>
+            <p>登录后昵称、账号、简介和头像色会保存在服务器，可在不同设备继续使用。</p>
+          </div>
+          {auth.status === 'authenticated' && auth.user && (
+            <button type="button" className="btn btn--ghost" onClick={() => void authStore.logout()}>
+              退出登录
+            </button>
+          )}
+        </div>
+        {auth.status === 'authenticated' && auth.user ? (
+          <p className="me__account-status" data-testid="account-status">
+            已登录 <strong>@{auth.user.handle}</strong> · 资料已同步
+          </p>
+        ) : (
+          <>
+            <div className="segmented me__auth-tabs" aria-label="登录方式">
+              <button
+                type="button"
+                aria-label="显示登录表单"
+                aria-pressed={authMode === 'login'}
+                className={authMode === 'login' ? 'is-active' : ''}
+                onClick={() => setAuthMode('login')}
+              >
+                登录
+              </button>
+              <button
+                type="button"
+                aria-label="显示注册表单"
+                aria-pressed={authMode === 'register'}
+                className={authMode === 'register' ? 'is-active' : ''}
+                onClick={() => setAuthMode('register')}
+              >
+                注册账号
+              </button>
+            </div>
+            <form className="me__auth-form" onSubmit={submitAuth}>
+              {authMode === 'register' && (
+                <label>
+                  <span>注册昵称</span>
+                  <input
+                    value={authDraft.nickname}
+                    onChange={(event) => setAuthDraft({ ...authDraft, nickname: event.target.value })}
+                    autoComplete="name"
+                    placeholder="别人看到的名字"
+                  />
+                </label>
+              )}
+              <label>
+                <span>{authMode === 'login' ? '登录账号' : '注册账号'}</span>
+                <input
+                  value={authDraft.handle}
+                  onChange={(event) => setAuthDraft({ ...authDraft, handle: event.target.value })}
+                  autoComplete="username"
+                  placeholder="字母、数字、点、下划线或短横线"
+                />
+              </label>
+              <label>
+                <span>密码</span>
+                <input
+                  type="password"
+                  value={authDraft.password}
+                  onChange={(event) => setAuthDraft({ ...authDraft, password: event.target.value })}
+                  autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
+                  placeholder="至少 10 个字符"
+                />
+              </label>
+              {authMode === 'register' && (
+                <label>
+                  <span>注册简介</span>
+                  <input value={authDraft.bio} onChange={(event) => setAuthDraft({ ...authDraft, bio: event.target.value })} placeholder="你在做什么" />
+                </label>
+              )}
+              {authIssues.length > 0 && (
+                <ul className="me__issues" role="alert">
+                  {authIssues.map((issue) => <li key={issue}>{issue}</li>)}
+                </ul>
+              )}
+              <button type="submit" className="btn btn--primary" disabled={authBusy}>
+                {authBusy ? '处理中…' : authMode === 'login' ? '登录' : '创建账号'}
+              </button>
+            </form>
+            {auth.status === 'error' && <p className="me__account-status me__account-status--warn">{auth.error}</p>}
+          </>
+        )}
+      </section>
 
       {!showForm && profile && (
         <>

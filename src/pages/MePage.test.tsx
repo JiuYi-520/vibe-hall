@@ -64,6 +64,13 @@ function renderPage() {
 }
 
 describe('MePage', () => {
+  it('提供自建账号登录与个人资料入口', () => {
+    renderPage()
+    expect(screen.getByTestId('account-section')).toBeInTheDocument()
+    expect(screen.getByLabelText('登录账号')).toBeInTheDocument()
+    expect(screen.getByLabelText('密码')).toHaveAttribute('type', 'password')
+  })
+
   it('没有身份时给出设置表单，并说明这不是账号', () => {
     renderPage()
     expect(screen.getByText(/不是账号/)).toBeInTheDocument()

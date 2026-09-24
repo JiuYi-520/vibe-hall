@@ -27,6 +27,17 @@ const post = (path, body, token) =>
     body: JSON.stringify(body ?? {}),
   })
 
+const postWithCookie = async (path, body, cookie) => {
+  const response = await api(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) },
+    body: JSON.stringify(body ?? {}),
+  })
+  return { status: response.status, body: response.status === 204 ? {} : await response.json(), response }
+}
+
+const cookieFrom = (response) => response.headers.get('set-cookie')?.split(';', 1)[0] ?? ''
+
 async function register(nickname = '阿岛', handle = 'a-dao') {
   const { status, body } = await post('/api/identity', { nickname, handle })
   expect(status).toBe(201)
@@ -125,6 +136,53 @@ describe('身份与愿望（真实 HTTP）', () => {
 
     const second = await post(`/api/wishes/${id}/cheer`, {}, visitor)
     expect(second.body.wish.cheers).toBe(0)
+  })
+})
+
+describe('自建账号登录与个人资料（真实 HTTP）', () => {
+  it('注册账号设置会话，资料跨请求可读写，登出后会话失效', async () => {
+    const registered = await postWithCookie('/api/auth/register', {
+      handle: 'lin-zi',
+      password: 'correct horse battery staple',
+      nickname: '林子',
+      bio: '做可靠的工具',
+      hue: 268,
+    })
+    expect(registered.status).toBe(201)
+    const cookie = cookieFrom(registered.response)
+    expect(cookie).toMatch(/^vh_session=/)
+    expect(registered.response.headers.get('set-cookie')).toContain('HttpOnly')
+    expect(registered.response.headers.get('set-cookie')).toContain('SameSite=Lax')
+    expect(registered.body.user).toMatchObject({ handle: 'lin-zi', nickname: '林子', bio: '做可靠的工具', hue: 268 })
+
+    const me = await json('/api/auth/me', { headers: { Cookie: cookie } })
+    expect(me.status).toBe(200)
+    expect(me.body.user.handle).toBe('lin-zi')
+
+    const updated = await fetch(`${hall.url}/api/profile`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Cookie: cookie },
+      body: JSON.stringify({ nickname: '林子·更新', bio: '持续做可靠的工具', hue: 318 }),
+    })
+    expect(updated.status).toBe(200)
+    expect((await updated.json()).user).toMatchObject({ nickname: '林子·更新', bio: '持续做可靠的工具', hue: 318 })
+
+    const logout = await postWithCookie('/api/auth/logout', {}, cookie)
+    expect(logout.status).toBe(204)
+    const after = await json('/api/auth/me', { headers: { Cookie: cookie } })
+    expect(after.status).toBe(401)
+  })
+
+  it('同一账号不能重复注册，错误密码不能登录', async () => {
+    const first = await postWithCookie('/api/auth/register', { handle: 'unique-user', password: 'correct horse battery staple', nickname: '唯一用户' })
+    expect(first.status).toBe(201)
+    const duplicate = await postWithCookie('/api/auth/register', { handle: 'unique-user', password: 'another secure password', nickname: '重复用户' })
+    expect(duplicate.status).toBe(409)
+    expect(duplicate.body.error.code).toBe('handle-taken')
+
+    const wrong = await postWithCookie('/api/auth/login', { handle: 'unique-user', password: 'wrong password' })
+    expect(wrong.status).toBe(401)
+    expect(wrong.body.error.code).toBe('bad-credentials')
   })
 })
 

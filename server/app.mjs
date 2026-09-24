@@ -71,7 +71,18 @@ function tokenOf(req, body) {
   const header = req.headers.authorization ?? ''
   const match = /^Bearer\s+(.+)$/i.exec(header)
   if (match) return match[1].trim()
+  const cookie = req.headers.cookie ?? ''
+  const session = cookie
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith('vh_session='))
+  if (session) return decodeURIComponent(session.slice('vh_session='.length))
   return typeof body.token === 'string' ? body.token : ''
+}
+
+function sessionCookie(token, req, maxAge = 60 * 60 * 24 * 30) {
+  const secure = req.headers['x-forwarded-proto'] === 'https' || process.env.COOKIE_SECURE === '1'
+  return `vh_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure ? '; Secure' : ''}`
 }
 
 /** 简单的按来源限流：公网部署时的最低防护，不是完整方案。 */
@@ -130,7 +141,8 @@ export function createApp({ store, allowedOrigin = '*', staticRoot, rateLimit, c
   const server = createServer(async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', allowedOrigin)
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS')
+    if (allowedOrigin !== '*') res.setHeader('Access-Control-Allow-Credentials', 'true')
     res.setHeader('Vary', 'Origin')
 
     if (req.method === 'OPTIONS') {
@@ -180,7 +192,7 @@ export function createApp({ store, allowedOrigin = '*', staticRoot, rateLimit, c
         return
       }
 
-      const body = req.method === 'POST' ? await readBody(req) : {}
+      const body = req.method === 'POST' || req.method === 'PATCH' ? await readBody(req) : {}
       const viewer = (() => {
         const token = tokenOf(req, body)
         if (!token) return null
@@ -191,7 +203,41 @@ export function createApp({ store, allowedOrigin = '*', staticRoot, rateLimit, c
         }
       })()
 
+      if (req.method === 'GET' && url.pathname === '/api/auth/me') {
+        if (!viewer) {
+          send(res, 401, { error: { code: 'unauthenticated', message: '请先登录' } })
+          return
+        }
+        send(res, 200, { user: store.getUser(tokenOf(req, body)) })
+        return
+      }
+
       switch (route) {
+        case 'POST /api/auth/register': {
+          const account = store.createAccount(body)
+          res.setHeader('Set-Cookie', sessionCookie(account.sessionToken, req))
+          send(res, 201, { user: account.user })
+          return
+        }
+        case 'POST /api/auth/login': {
+          const account = store.login(body)
+          res.setHeader('Set-Cookie', sessionCookie(account.sessionToken, req))
+          send(res, 200, { user: account.user })
+          return
+        }
+        case 'POST /api/auth/logout': {
+          const session = tokenOf(req, body)
+          store.destroySession(session)
+          res.setHeader('Set-Cookie', sessionCookie('', req, 0))
+          res.writeHead(204)
+          res.end()
+          return
+        }
+        case 'PATCH /api/profile': {
+          const token = tokenOf(req, body)
+          send(res, 200, { user: store.updateProfile({ ...body, token }) })
+          return
+        }
         case 'POST /api/identity': {
           const identity = store.createIdentity(body)
           send(res, 201, { token: identity.token, nickname: identity.nickname, handle: identity.handle })

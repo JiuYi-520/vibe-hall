@@ -71,6 +71,7 @@ async function apiFetchAt<T>(
     const response = await fetch(`${base}${path}`, {
       method,
       signal: controller.signal,
+      credentials: 'include',
       headers: {
         ...(body ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -218,6 +219,13 @@ export function toPost(row: ServerPost): ForumPost {
 
 export const serverApi = {
   health: () => apiFetch<{ ok: boolean; stats: Record<string, number> }>('/api/health', { timeoutMs: 2000 }),
+  authMe: () => apiFetch<{ user: { id: number; nickname: string; handle: string; bio: string; hue: number } }>('/api/auth/me'),
+  registerAccount: (body: Record<string, unknown>) => apiFetch<{ user: { id: number; nickname: string; handle: string; bio: string; hue: number } }>('/api/auth/register', { method: 'POST', body }),
+  loginAccount: (body: { handle: string; password: string }) =>
+    apiFetch<{ user: { id: number; nickname: string; handle: string; bio: string; hue: number } }>('/api/auth/login', { method: 'POST', body }),
+  logout: () => apiFetch('/api/auth/logout', { method: 'POST' }),
+  updateProfile: (body: Record<string, unknown>) =>
+    apiFetch<{ user: { id: number; nickname: string; handle: string; bio: string; hue: number } }>('/api/profile', { method: 'PATCH', body }),
   register: (nickname: string, handle: string) => apiFetch<{ token: string }>('/api/identity', { method: 'POST', body: { nickname, handle } }),
   listWishes: (token?: string) => apiFetch<{ wishes: ServerWish[] }>('/api/wishes', { token }),
   createWish: (token: string, body: Record<string, unknown>) => apiFetch<{ wish: ServerWish }>('/api/wishes', { method: 'POST', body, token }),

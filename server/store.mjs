@@ -1,10 +1,12 @@
 import { DatabaseSync } from 'node:sqlite'
-import { randomBytes, randomUUID } from 'node:crypto'
+import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto'
 
 const HANDLE = /^[a-z0-9][a-z0-9._-]{1,29}$/i
 const CATEGORIES = ['tool', 'game', 'education', 'visual', 'data', 'ai', 'life', 'sound']
 const POST_KINDS = ['ask', 'share', 'showcase', 'recruit', 'chat']
 const LIMITS = { title: 60, brief: 400, body: 2000, note: 120, reply: 400 }
+const PASSWORD_MIN = 10
+const SESSION_DAYS = 30
 
 export class StoreError extends Error {
   constructor(code, status, message) {
@@ -41,9 +43,36 @@ function requireText(value, field, limit) {
   return text
 }
 
+function requirePassword(value) {
+  if (typeof value !== 'string' || value.length < PASSWORD_MIN) fail('weak-password', 400, `密码至少需要 ${PASSWORD_MIN} 个字符`)
+  if (value.length > 200) fail('weak-password', 400, '密码不能超过 200 个字符')
+  return value
+}
+
+function hashPassword(password, salt = randomBytes(16)) {
+  return {
+    salt: salt.toString('base64url'),
+    hash: scryptSync(password, salt, 64).toString('base64url'),
+  }
+}
+
+function verifyPassword(password, encodedHash, encodedSalt) {
+  try {
+    const expected = Buffer.from(encodedHash, 'base64url')
+    const actual = scryptSync(password, Buffer.from(encodedSalt, 'base64url'), expected.length)
+    return expected.length === actual.length && timingSafeEqual(expected, actual)
+  } catch {
+    return false
+  }
+}
+
+function hashSession(token) {
+  return createHash('sha256').update(token).digest('hex')
+}
+
 /**
  * 展馆后端存储：SQLite（node:sqlite 内置，无需编译原生依赖）。
- * 身份是「设备令牌」而不是账号：没有密码、没有第三方登录，令牌只是同一设备的凭据。
+ * 同时支持自建账号会话与旧版设备令牌；账号密码使用 Node 内置 scrypt 加盐存储。
  */
 export function createStore({ file = ':memory:' } = {}) {
   const db = new DatabaseSync(file)
@@ -55,7 +84,19 @@ export function createStore({ file = ':memory:' } = {}) {
       token TEXT NOT NULL UNIQUE,
       nickname TEXT NOT NULL,
       handle TEXT NOT NULL DEFAULT '',
-      created_at TEXT NOT NULL
+      created_at TEXT NOT NULL,
+      password_hash TEXT,
+      password_salt TEXT,
+      bio TEXT NOT NULL DEFAULT '',
+      hue INTEGER NOT NULL DEFAULT 212,
+      updated_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      identity_id INTEGER NOT NULL REFERENCES identities(id) ON DELETE CASCADE,
+      token_hash TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS wishes (
       id TEXT PRIMARY KEY,
@@ -102,13 +143,34 @@ export function createStore({ file = ':memory:' } = {}) {
     );
   `)
 
+  // 旧数据库只创建过前五列；增量迁移保持已有愿望、帖子和设备令牌不丢失。
+  for (const statement of [
+    'ALTER TABLE identities ADD COLUMN password_hash TEXT',
+    'ALTER TABLE identities ADD COLUMN password_salt TEXT',
+    "ALTER TABLE identities ADD COLUMN bio TEXT NOT NULL DEFAULT ''",
+    'ALTER TABLE identities ADD COLUMN hue INTEGER NOT NULL DEFAULT 212',
+    'ALTER TABLE identities ADD COLUMN updated_at TEXT',
+  ]) {
+    try {
+      db.exec(statement)
+    } catch (error) {
+      if (!/duplicate column name/i.test(String(error?.message ?? ''))) throw error
+    }
+  }
+
   const identityById = db.prepare('SELECT * FROM identities WHERE id = ?')
   const identityByToken = db.prepare('SELECT * FROM identities WHERE token = ?')
+  const identityByHandle = db.prepare('SELECT * FROM identities WHERE lower(handle) = lower(?) LIMIT 1')
+  const identityBySession = db.prepare(
+    `SELECT identities.* FROM sessions JOIN identities ON identities.id = sessions.identity_id
+     WHERE sessions.token_hash = ? AND sessions.expires_at > ?`,
+  )
   const cheersFor = db.prepare('SELECT identity_id FROM wish_cheers WHERE wish_id = ?')
   const repliesFor = db.prepare('SELECT * FROM replies WHERE post_id = ? ORDER BY created_at ASC')
   const likesFor = db.prepare('SELECT identity_id FROM post_likes WHERE post_id = ?')
 
   const asIdentity = (row) => ({ nickname: row.nickname, handle: row.handle })
+  const asUser = (row) => ({ id: Number(row.id), nickname: row.nickname, handle: row.handle, bio: row.bio ?? '', hue: Number(row.hue ?? 212) })
 
   const mapWish = (row, viewerId) => {
     const cheerIds = cheersFor.all(row.id).map((entry) => entry.identity_id)
@@ -168,13 +230,91 @@ export function createStore({ file = ':memory:' } = {}) {
   const authenticate = (token) => {
     const text = typeof token === 'string' ? token.trim() : ''
     if (!text) fail('unauthenticated', 401, '缺少设备令牌')
-    const row = identityByToken.get(text)
-    if (!row) fail('unauthenticated', 401, '设备令牌无效')
+    const row = identityByToken.get(text) ?? identityBySession.get(hashSession(text), nowIso())
+    if (!row) fail('unauthenticated', 401, '设备令牌或登录会话无效')
     return row
   }
 
   return {
     authenticate,
+
+    createSession(identityId) {
+      const sessionToken = randomBytes(32).toString('base64url')
+      const createdAt = new Date()
+      const expiresAt = new Date(createdAt.getTime() + SESSION_DAYS * 24 * 60 * 60 * 1000)
+      db.prepare('INSERT INTO sessions (identity_id, token_hash, created_at, expires_at) VALUES (?, ?, ?, ?)').run(
+        identityId,
+        hashSession(sessionToken),
+        createdAt.toISOString(),
+        expiresAt.toISOString(),
+      )
+      return sessionToken
+    },
+
+    createAccount({ handle, password, nickname, bio = '', hue = 212 } = {}) {
+      const cleanHandle = requireText(handle, '账号', 30).toLowerCase()
+      if (!HANDLE.test(cleanHandle)) fail('bad-handle', 400, '账号只能用字母、数字、点、下划线和短横线')
+      if (identityByHandle.get(cleanHandle)) fail('handle-taken', 409, '这个账号已经被注册')
+      const cleanPassword = requirePassword(password)
+      const cleanNickname = requireText(nickname || cleanHandle, '昵称', 20)
+      const cleanBio = typeof bio === 'string' ? bio.trim().slice(0, 160) : ''
+      const cleanHue = Number.isFinite(Number(hue)) ? Math.max(0, Math.min(360, Math.round(Number(hue)))) : 212
+      const passwordData = hashPassword(cleanPassword)
+      const token = randomBytes(24).toString('base64url')
+      const createdAt = nowIso()
+      let info
+      try {
+        info = db
+          .prepare(
+            `INSERT INTO identities (token, nickname, handle, created_at, password_hash, password_salt, bio, hue, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          )
+          .run(token, cleanNickname, cleanHandle, createdAt, passwordData.hash, passwordData.salt, cleanBio, cleanHue, createdAt)
+      } catch (error) {
+        if (/unique/i.test(String(error?.message ?? ''))) fail('handle-taken', 409, '这个账号已经被注册')
+        throw error
+      }
+      const identity = identityById.get(Number(info.lastInsertRowid))
+      return { user: asUser(identity), sessionToken: this.createSession(identity.id) }
+    },
+
+    login({ handle, password } = {}) {
+      const cleanHandle = typeof handle === 'string' ? handle.trim().toLowerCase() : ''
+      const row = identityByHandle.get(cleanHandle)
+      if (!row?.password_hash || !row.password_salt || !verifyPassword(password, row.password_hash, row.password_salt)) {
+        fail('bad-credentials', 401, '账号或密码不正确')
+      }
+      return { user: asUser(row), sessionToken: this.createSession(row.id) }
+    },
+
+    destroySession(sessionToken) {
+      if (typeof sessionToken === 'string' && sessionToken.trim()) db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(hashSession(sessionToken.trim()))
+    },
+
+    getUser(token) {
+      return asUser(authenticate(token))
+    },
+
+    updateProfile({ token, nickname, handle, bio = '', hue = 212 } = {}) {
+      const identity = authenticate(token)
+      const cleanNickname = requireText(nickname, '昵称', 20)
+      const cleanHandle = (typeof handle === 'string' && handle.trim() ? handle.trim() : identity.handle).toLowerCase()
+      if (!cleanHandle) fail('empty-field', 400, '账号 不能为空')
+      if (!HANDLE.test(cleanHandle)) fail('bad-handle', 400, '账号只能用字母、数字、点、下划线和短横线')
+      const owner = identityByHandle.get(cleanHandle)
+      if (owner && Number(owner.id) !== Number(identity.id)) fail('handle-taken', 409, '这个账号已经被注册')
+      const cleanBio = typeof bio === 'string' ? bio.trim().slice(0, 160) : ''
+      const cleanHue = Number.isFinite(Number(hue)) ? Math.max(0, Math.min(360, Math.round(Number(hue)))) : 212
+      db.prepare('UPDATE identities SET nickname = ?, handle = ?, bio = ?, hue = ?, updated_at = ? WHERE id = ?').run(
+        cleanNickname,
+        cleanHandle,
+        cleanBio,
+        cleanHue,
+        nowIso(),
+        identity.id,
+      )
+      return asUser(identityById.get(identity.id))
+    },
 
     createIdentity({ nickname, handle } = {}) {
       const cleanNickname = requireText(nickname, '昵称', 20)

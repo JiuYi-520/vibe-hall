@@ -57,7 +57,7 @@ export function SiteSidebar({ open, narrow, onClose }: SiteSidebarProps) {
 
       <div className="site-sidebar__me">
         <p className={`site-sidebar__mode site-sidebar__mode--${server.status}`}>
-          {server.status === 'online' ? '后端在线 · 多设备可见' : server.status === 'checking' ? '正在探测后端…' : '本机模式 · 只在本机'}
+          {server.status === 'online' ? '愿望/论坛在线 · 多设备可见' : server.status === 'checking' ? '正在探测后端…' : '本机模式 · 只在本机'}
           {server.status === 'offline' && (
             <button type="button" className="link-btn" onClick={server.refresh}>
               重试
