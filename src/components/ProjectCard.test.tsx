@@ -45,19 +45,30 @@ function renderCard(project: Project) {
 }
 
 describe('ProjectCard 封面', () => {
-  it('GitHub 记录渲染仓库真实预览图，且懒加载、不带 referrer', () => {
+  it('GitHub 记录优先渲染本站缓存封面，且懒加载、不带 referrer', () => {
     renderCard(githubProject)
 
     const image = screen.getByTestId('project-cover-image') as HTMLImageElement
-    expect(image.getAttribute('src')).toBe('https://opengraph.githubassets.com/1/xintaofei/codeg')
+    expect(image.getAttribute('src')).toBe('/api/cover/xintaofei/codeg')
     expect(image.getAttribute('loading')).toBe('lazy')
     expect(image.getAttribute('decoding')).toBe('async')
     expect(image.getAttribute('referrerpolicy')).toBe('no-referrer')
   })
 
-  it('图片加载失败时回落到程序化封面', () => {
+  it('本站缓存取不到时退回 GitHub 原图', () => {
     renderCard(githubProject)
 
+    fireEvent.error(screen.getByTestId('project-cover-image'))
+
+    expect(screen.getByTestId('project-cover-image').getAttribute('src')).toBe(
+      'https://opengraph.githubassets.com/1/xintaofei/codeg',
+    )
+  })
+
+  it('两张图都失败才回落到程序化封面', () => {
+    renderCard(githubProject)
+
+    fireEvent.error(screen.getByTestId('project-cover-image'))
     fireEvent.error(screen.getByTestId('project-cover-image'))
 
     expect(screen.queryByTestId('project-cover-image')).toBeNull()

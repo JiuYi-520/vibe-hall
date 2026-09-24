@@ -13,8 +13,10 @@ import { canDeleteComment, listComments } from '../data/interactions'
 import { CREDIT_RULES, summarize } from '../data/credits'
 import { seedComments } from '../data/interactionSeed'
 import { withDemo } from '../data/demo'
-import { CoverArt } from '../components/CoverArt'
+import { ProjectCover } from '../components/ProjectCover'
 import { ProjectCard } from '../components/ProjectCard'
+import { RepoTrend } from '../components/RepoTrend'
+import { starHistory } from '../data/history'
 
 const LINK_LABEL: Record<string, string> = {
   demo: '打开作品',
@@ -109,7 +111,7 @@ export function ProjectPage({
 
       <header className="detail__head">
         <div className="detail__visual enter" style={{ ['--i' as string]: 0 }}>
-          <CoverArt project={project} variant="hero" />
+          <ProjectCover project={project} variant="hero" />
         </div>
         <div className="detail__intro enter" style={{ ['--i' as string]: 1 }}>
           <div className="detail__chips">
@@ -188,6 +190,9 @@ export function ProjectPage({
       </header>
 
       <div className="detail__grid">
+        {project.provenance.source === 'github' && project.provenance.repoFullName && (
+          <RepoTrend repo={project.provenance.repoFullName} history={starHistory} window="30d" />
+        )}
         <section className="detail__block">
           <h2>
             <span aria-hidden="true">✎</span> 这是怎么做出来的

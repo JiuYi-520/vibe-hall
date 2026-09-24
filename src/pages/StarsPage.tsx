@@ -4,6 +4,7 @@ import type { Project } from '../data/types'
 import type { RepoKind, StarMode, StarSnapshot, StarWindow } from '../data/starTypes'
 import { KIND_LABEL, STAR_MODE_LABEL, STAR_WINDOW_META } from '../data/starTypes'
 import { buildStarBoard, kindCounts } from '../data/stars'
+import { buildLanguageStats } from '../data/analytics'
 import { starHistory } from '../data/history'
 import { loadProjects } from '../data/loadProjects'
 import { formatCompact } from '../lib/format'
@@ -38,6 +39,7 @@ export function StarsPage({ projects = bundle.projects, history = starHistory }:
     [projects, history, window, kind, effectiveMode],
   )
   const counts = useMemo(() => kindCounts(projects), [projects])
+  const languageStats = useMemo(() => buildLanguageStats(history, projects.filter((project) => project.provenance.source === 'github').map((project) => project.provenance.repoFullName!).filter(Boolean), window), [history, projects, window])
   const allGainZero = gainBoard.hasGain && maxGain === 0
 
   return (
@@ -121,6 +123,10 @@ export function StarsPage({ projects = bundle.projects, history = starHistory }:
             : `窗口内快照不足两次（当前窗口内 ${board.snapshotCount} 次），把窗口换成「月」或「全部」即可看到增量。`}
         </p>
       )}
+      <section className="language-stats" aria-labelledby="language-stats-title">
+        <div className="stars__head"><h2 id="language-stats-title">按语言统计</h2><p className="stars__lead">仅统计本站收录仓库的最新真实快照；Fork 缺失时保留未知。</p></div>
+        {languageStats.length === 0 ? <p className="stars__note">暂无可用语言快照。</p> : <div className="stars__table-wrap"><table className="stars__table"><caption className="sr-only">编程语言星标与 Fork 统计</caption><thead><tr><th>语言</th><th>仓库</th><th>星标</th><th>星标变化</th><th>Fork</th><th>Fork 变化</th></tr></thead><tbody>{languageStats.map((row) => <tr key={row.language}><th scope="row">{row.language}</th><td>{row.repos}</td><td>{row.stars}</td><td>{row.starGain === null ? '历史不足' : row.starGain > 0 ? `+${row.starGain}` : row.starGain}</td><td>{row.forks === null ? '未完整采集' : row.forks}</td><td>{row.forkGain === null ? '历史不足' : row.forkGain > 0 ? `+${row.forkGain}` : row.forkGain}</td></tr>)}</tbody></table></div>}
+      </section>
       {allGainZero && (
         <p className="stars__note">
           两次快照相隔很短，窗口内所有仓库增量为 0；等下一次抓取间隔足够长，这一列才会有数字。

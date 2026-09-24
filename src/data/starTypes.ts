@@ -9,6 +9,8 @@ export type StarMode = 'gain' | 'rate' | 'total'
 export interface StarSnapshot {
   at: string
   repos: Record<string, number>
+  forks?: Record<string, number>
+  languages?: Record<string, string | null>
 }
 
 export interface StarRow {
@@ -52,7 +54,7 @@ export const KIND_ORDER: RepoKind[] = ['skill', 'app', 'library', 'list', 'other
 
 export const STAR_MODE_LABEL: Record<StarMode, string> = {
   gain: '增量榜',
-  rate: '增速榜',
+  rate: '增速榜（生涯日均）',
   total: '存量榜',
 }
 

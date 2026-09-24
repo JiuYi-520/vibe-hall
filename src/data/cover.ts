@@ -15,8 +15,14 @@ export function githubCoverUrl(repoFullName: string): string {
 export function resolveCoverUrl(
   project: Pick<Project, 'coverImageUrl' | 'provenance'>,
 ): string | undefined {
-  if (project.coverImageUrl) return project.coverImageUrl
+  return coverSources(project)[0]
+}
+
+export function coverSources(project: Pick<Project, 'coverImageUrl' | 'provenance'>): string[] {
+  if (project.coverImageUrl) return [project.coverImageUrl]
   const repoFullName = project.provenance?.repoFullName
-  if (project.provenance?.source === 'github' && repoFullName) return githubCoverUrl(repoFullName)
-  return undefined
+  if (project.provenance?.source === 'github' && repoFullName && /^[a-z\d-]+\/[a-z\d_.-]+$/i.test(repoFullName)) {
+    return [`/api/cover/${repoFullName}`, githubCoverUrl(repoFullName)]
+  }
+  return []
 }

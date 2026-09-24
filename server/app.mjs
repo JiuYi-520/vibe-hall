@@ -3,6 +3,7 @@ import { readFile, stat } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { StoreError, createStore } from './store.mjs'
+import { createCoverCache } from './covers.mjs'
 
 const MAX_BODY = 64 * 1024
 const MIME = {
@@ -121,9 +122,10 @@ async function serveStatic({ root, urlPath, req, res }) {
  * 展馆后端：零依赖 HTTP API（node:http）+ SQLite（node:sqlite）。
  * 身份是设备令牌，不是账号：没有密码、没有第三方登录；令牌只证明“同一台设备”。
  */
-export function createApp({ store, allowedOrigin = '*', staticRoot, rateLimit } = {}) {
+export function createApp({ store, allowedOrigin = '*', staticRoot, rateLimit, coverCache, coverRepos = [], statsFile } = {}) {
   if (!store) throw new Error('createApp requires a store')
   const limited = createRateLimiter(rateLimit)
+  const knownCovers = new Set(coverRepos)
 
   const server = createServer(async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', allowedOrigin)
@@ -156,6 +158,25 @@ export function createApp({ store, allowedOrigin = '*', staticRoot, rateLimit } 
 
       if (req.method === 'GET' && url.pathname === '/api/health') {
         send(res, 200, { ok: true, storage: 'sqlite', stats: store.stats() })
+        return
+      }
+
+      if (req.method === 'GET' && url.pathname === '/api/github-stats') {
+        const data = statsFile ? await readFile(statsFile, 'utf8').then(JSON.parse).catch(() => null) : null
+        if (!data || !Array.isArray(data.snapshots)) { send(res, 503, { error: { code: 'stats-unavailable', message: '统计暂不可用' } }); return }
+        send(res, 200, data)
+        return
+      }
+      if ((req.method === 'GET' || req.method === 'HEAD') && segments[0] === 'api' && segments[1] === 'cover') {
+        const [, , owner, repo] = segments
+        if (segments.length !== 4 || !knownCovers.has(`${owner}/${repo}`) || !coverCache) {
+          send(res, 404, { error: { code: 'cover-not-found' } }); return
+        }
+        const image = await coverCache.get(owner, repo)
+        if (!image) { send(res, 502, { error: { code: 'cover-unavailable' } }); return }
+        res.writeHead(200, { 'Content-Type': image.contentType, 'Content-Length': image.body.length,
+          'Cache-Control': 'public, max-age=3600', 'X-Content-Type-Options': 'nosniff' })
+        res.end(req.method === 'HEAD' ? undefined : image.body)
         return
       }
 
@@ -248,9 +269,12 @@ export function startServer({
   allowedOrigin = '*',
   staticRoot,
   rateLimit,
+  coverCache,
+  coverRepos = [],
+  statsFile,
 } = {}) {
   const store = createStore({ file })
-  const server = createApp({ store, allowedOrigin, staticRoot, rateLimit })
+  const server = createApp({ store, allowedOrigin, staticRoot, rateLimit, coverCache, coverRepos, statsFile })
   return new Promise((resolve) => {
     server.listen(port, host, () => {
       const address = server.address()
@@ -280,7 +304,11 @@ if (isDirectRun) {
   const host = process.env.HOST ?? '127.0.0.1'
   // 没显式指定时，如果本地已经 build 过，就顺手把 dist 一起托管：一条命令起一个端口。
   const staticRoot = process.env.STATIC_ROOT ?? (existsSync('dist/index.html') ? 'dist' : '')
-  const started = await startServer({ port, file, host, allowedOrigin: origin, staticRoot: staticRoot || undefined })
+  const catalogue = JSON.parse(await readFile(new URL('../src/data/github-live.json', import.meta.url), 'utf8'))
+  const coverRepos = catalogue.projects.filter((p) => p.provenance?.source === 'github').map((p) => p.provenance.repoFullName)
+  const coverCache = createCoverCache({ dir: process.env.HALL_COVER_DIR || path.join(path.dirname(file), 'cover-cache') })
+  const statsFile = process.env.HALL_STATS_FILE || path.join(path.dirname(file), 'github-stats.json')
+  const started = await startServer({ port, file, host, allowedOrigin: origin, staticRoot: staticRoot || undefined, coverCache, coverRepos, statsFile })
   console.log(`VIBE HALL 后端已启动：${started.url}`)
   console.log(`数据文件：${file}（SQLite，node:sqlite 内置）`)
   console.log(staticRoot ? `同时托管前端：${staticRoot}` : '未托管前端（只提供 /api，前端请另起静态服务）')

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { githubCoverUrl, resolveCoverUrl } from './cover'
+import { coverSources, githubCoverUrl, resolveCoverUrl } from './cover'
 import type { Project } from './types'
 
 function project(overrides: Partial<Project> = {}): Project {
@@ -34,9 +34,7 @@ describe('githubCoverUrl', () => {
 
 describe('resolveCoverUrl', () => {
   it('GitHub 记录按仓库全名派生真实封面', () => {
-    expect(resolveCoverUrl(project())).toBe(
-      'https://opengraph.githubassets.com/1/xintaofei/codeg',
-    )
+    expect(resolveCoverUrl(project())).toBe('/api/cover/xintaofei/codeg')
   })
 
   it('显式 coverImageUrl 优先于派生值', () => {
@@ -49,5 +47,24 @@ describe('resolveCoverUrl', () => {
     expect(
       resolveCoverUrl(project({ provenance: { source: 'seed', note: '演示示例数据' } })),
     ).toBeUndefined()
+  })
+})
+
+describe('coverSources', () => {
+  it('GitHub 记录优先用本站缓存，再退回 GitHub 原图', () => {
+    expect(coverSources(project())).toEqual([
+      '/api/cover/xintaofei/codeg',
+      'https://opengraph.githubassets.com/1/xintaofei/codeg',
+    ])
+  })
+
+  it('显式 coverImageUrl 只有一级来源', () => {
+    expect(coverSources(project({ coverImageUrl: 'https://cdn.example.com/a.png' }))).toEqual([
+      'https://cdn.example.com/a.png',
+    ])
+  })
+
+  it('演示记录没有任何真实图片来源', () => {
+    expect(coverSources(project({ provenance: { source: 'seed', note: '演示' } }))).toEqual([])
   })
 })

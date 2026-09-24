@@ -1,6 +1,7 @@
 import type { Project } from './types'
 import type { RepoKind, StarBoard, StarMode, StarRow, StarSnapshot, StarWindow } from './starTypes'
 import { KIND_ORDER, STAR_WINDOW_META } from './starTypes'
+import { normalizeSnapshots, windowSnapshots } from './analytics'
 
 export type {
   RepoKind,
@@ -46,11 +47,6 @@ export function windowDays(window: StarWindow): number | null {
   return STAR_WINDOW_META.find((item) => item.id === window)?.days ?? null
 }
 
-function time(iso: string): number {
-  const value = new Date(iso).getTime()
-  return Number.isFinite(value) ? value : 0
-}
-
 function toRow(project: Project, gain: number | null, now: number): StarRow {
   const fullName = project.provenance.repoFullName ?? project.slug
   return {
@@ -88,11 +84,9 @@ export function buildStarBoard({
   mode: StarMode
   now?: number
 }): StarBoard {
-  const snapshots = [...history].filter((item) => Number.isFinite(time(item.at))).sort((a, b) => time(a.at) - time(b.at))
+  const snapshots = normalizeSnapshots(history, now)
   const latest = snapshots[snapshots.length - 1]
-  const days = windowDays(window)
-  const inWindow =
-    latest && days !== null ? snapshots.filter((item) => time(item.at) >= time(latest.at) - days * MS_PER_DAY) : snapshots
+  const inWindow = windowSnapshots(snapshots, window)
   const base = inWindow.length >= 2 ? inWindow[0] : null
 
   const rows = projects
@@ -100,15 +94,16 @@ export function buildStarBoard({
     .map((project) => {
       const fullName = project.provenance.repoFullName ?? project.slug
       const baseStars = base?.repos[fullName]
-      const gain = base && typeof baseStars === 'number' ? (project.stars ?? 0) - baseStars : null
-      return toRow(project, gain, now)
+      const latestStars = latest?.repos[fullName]
+      const gain = base && typeof baseStars === 'number' && typeof latestStars === 'number' ? latestStars - baseStars : null
+      return toRow({ ...project, stars: latestStars ?? project.stars }, gain, now)
     })
     .filter((row) => kind === 'all' || row.kind === kind)
 
   const sorted = rows.sort((a, b) => {
     if (mode === 'gain') {
-      const left = a.gain ?? -1
-      const right = b.gain ?? -1
+      const left = a.gain ?? -Infinity
+      const right = b.gain ?? -Infinity
       if (left !== right) return right - left
       return b.stars - a.stars
     }
@@ -123,7 +118,7 @@ export function buildStarBoard({
     totalSnapshots: snapshots.length,
     earliest: inWindow[0]?.at,
     latest: latest?.at,
-    hasGain: Boolean(base),
+    hasGain: rows.some((row) => row.gain !== null),
   }
 }
 
