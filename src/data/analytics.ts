@@ -3,6 +3,17 @@ import { STAR_WINDOW_META } from './starTypes'
 
 const validCount = (value: unknown): value is number => Number.isSafeInteger(value) && Number(value) >= 0
 
+export async function fetchLiveSnapshots(fallback: StarSnapshot[]): Promise<StarSnapshot[]> {
+  if (import.meta.env.MODE === 'test') return fallback
+  try {
+    const response = await fetch('/api/github-stats', { headers: { Accept: 'application/json' } })
+    if (!response.ok) return fallback
+    const payload = await response.json() as { snapshots?: unknown }
+    const snapshots = normalizeSnapshots(payload.snapshots)
+    return snapshots.length > 0 ? snapshots : fallback
+  } catch { return fallback }
+}
+
 export function normalizeSnapshots(input: unknown, now = Date.now()): StarSnapshot[] {
   if (!Array.isArray(input)) return []
   const result = new Map<number, StarSnapshot>()

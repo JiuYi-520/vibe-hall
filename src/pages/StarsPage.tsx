@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Project } from '../data/types'
 import type { RepoKind, StarMode, StarSnapshot, StarWindow } from '../data/starTypes'
 import { KIND_LABEL, STAR_MODE_LABEL, STAR_WINDOW_META } from '../data/starTypes'
 import { buildStarBoard, kindCounts } from '../data/stars'
-import { buildLanguageStats } from '../data/analytics'
+import { buildLanguageStats, fetchLiveSnapshots } from '../data/analytics'
 import { starHistory } from '../data/history'
 import { loadProjects } from '../data/loadProjects'
 import { formatCompact } from '../lib/format'
@@ -22,24 +22,26 @@ function shortDate(iso?: string): string {
 }
 
 export function StarsPage({ projects = bundle.projects, history = starHistory }: StarsPageProps) {
+  const [liveHistory, setLiveHistory] = useState(history)
+  useEffect(() => { let active = true; void fetchLiveSnapshots(history).then((next) => { if (active) setLiveHistory(next) }); return () => { active = false } }, [history])
   const [window, setWindow] = useState<StarWindow>('30d')
   const [kind, setKind] = useState<RepoKind | 'all'>('all')
   const [mode, setMode] = useState<StarMode | null>(null)
 
   const gainBoard = useMemo(
-    () => buildStarBoard({ projects, history, window, kind, mode: 'gain' }),
-    [projects, history, window, kind],
+    () => buildStarBoard({ projects, history: liveHistory, window, kind, mode: 'gain' }),
+    [projects, liveHistory, window, kind],
   )
   const maxGain = gainBoard.rows.reduce((max, row) => Math.max(max, row.gain ?? 0), 0)
   /** 没增量就自动退到增速榜，不让空榜当成结果。 */
   const autoMode: StarMode = gainBoard.hasGain && maxGain > 0 ? 'gain' : 'rate'
   const effectiveMode: StarMode = mode ?? autoMode
   const board = useMemo(
-    () => buildStarBoard({ projects, history, window, kind, mode: effectiveMode }),
-    [projects, history, window, kind, effectiveMode],
+    () => buildStarBoard({ projects, history: liveHistory, window, kind, mode: effectiveMode }),
+    [projects, liveHistory, window, kind, effectiveMode],
   )
   const counts = useMemo(() => kindCounts(projects), [projects])
-  const languageStats = useMemo(() => buildLanguageStats(history, projects.filter((project) => project.provenance.source === 'github').map((project) => project.provenance.repoFullName!).filter(Boolean), window), [history, projects, window])
+  const languageStats = useMemo(() => buildLanguageStats(liveHistory, projects.filter((project) => project.provenance.source === 'github').map((project) => project.provenance.repoFullName!).filter(Boolean), window), [liveHistory, projects, window])
   const allGainZero = gainBoard.hasGain && maxGain === 0
 
   return (

@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { StarSnapshot, StarWindow } from '../data/starTypes'
-import { projectTrend } from '../data/analytics'
+import { fetchLiveSnapshots, projectTrend } from '../data/analytics'
 
 export function RepoTrend({ repo, history, window }: { repo: string; history: StarSnapshot[]; window: StarWindow }) {
   const [metric, setMetric] = useState<'stars' | 'forks'>('stars')
-  const points = useMemo(() => projectTrend(history, repo, window), [history, repo, window])
+  const [liveHistory, setLiveHistory] = useState(history)
+  useEffect(() => { let active = true; void fetchLiveSnapshots(history).then((next) => { if (active) setLiveHistory(next) }); return () => { active = false } }, [history])
+  const points = useMemo(() => projectTrend(liveHistory, repo, window), [liveHistory, repo, window])
   const values = points.map((point) => point[metric]).filter((value): value is number => typeof value === 'number')
   const change = values.length >= 2 ? values.at(-1)! - values[0] : null
   const max = Math.max(1, ...values)
